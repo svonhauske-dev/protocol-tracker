@@ -56,12 +56,12 @@ export default function WeekStrip({
               {/* TODAY tag — floats ABOVE the cell (no reserved height). Bordered
                   badge with a canvas fill so it reads cleanly over the cell edge. */}
               {isToday ? (
-                <View style={{ position: 'absolute', top: -11, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
-                  <View style={{ paddingHorizontal: 5, paddingTop: 2, paddingBottom: 1, borderRadius: theme.radius.pill, borderWidth: theme.borderWidth.default, borderColor: theme.border.strong, backgroundColor: theme.surface.canvas }}>
+                <View style={{ position: 'absolute', top: -18, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
+                  <View style={{ paddingHorizontal: 5, paddingTop: 2, paddingBottom: 1, borderRadius: theme.radius.pill, borderWidth: theme.borderWidth.default, borderColor: theme.border.strong, backgroundColor: theme.surface.backdrop }}>
                     <Text
                       allowFontScaling={false}
                       includeFontPadding={false}
-                      style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.text.primary, fontFamily: fonts.mono.semibold, letterSpacing: 1 }}
+                      style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.text.primary, fontFamily: fonts.mono.semibold, letterSpacing: 1, transform: [{ translateY: 1 }] }}
                     >
                       TODAY
                     </Text>
