@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, View, RefreshControl, Pressable } from 'react-native';
+import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Library, Plus, Pencil } from 'lucide-react-native';
@@ -54,6 +54,7 @@ import SettingsScreen from './SettingsScreen';
 import ProtocolLibrary from './ProtocolLibrary';
 import ProtocolDetailScreen from './ProtocolDetailScreen';
 import SlideScreen from '../components/SlideScreen';
+import IconButton from '../components/IconButton';
 
 const ANYTIME_SLOT = { id: 'anytime', label: 'Anytime', sublabel: 'No specific time', icon: '◦' };
 
@@ -73,38 +74,12 @@ const sliceForDay = (checked, dk) => {
   return out;
 };
 
-// Matches src AccountAvatar size="touch": touch.min circle, cardSubtle fill,
-// JetBrains Mono medium initial at body size.
+// Avatar = the shared IconButton as a circle with the initial.
 function Avatar({ initial, onPress }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityLabel="Settings"
-      style={{
-        width: touch.min, height: touch.min, borderRadius: theme.radius.pill,
-        borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle,
-        alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surface.cardSubtle,
-      }}
-    >
+    <IconButton shape="circle" onPress={onPress} accessibilityLabel="Settings">
       <Text weight="medium" size="body">{initial}</Text>
-    </Pressable>
-  );
-}
-
-// Matches Button variant="icon": touch.min square (radius.button = 0), subtle border.
-function IconButton({ children, onPress, label }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityLabel={label}
-      style={{
-        width: touch.min, height: touch.min, borderRadius: theme.radius.button,
-        borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle,
-        alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      {children}
-    </Pressable>
+    </IconButton>
   );
 }
 
@@ -153,6 +128,13 @@ export default function Today({ user, onSignOut }) {
 
   const dk = dateKey(viewDate);
   const viewDay = viewDate.getDay();
+
+  // Gentle fade of the day's content when you switch days.
+  const dayFade = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    dayFade.setValue(0.35);
+    Animated.timing(dayFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  }, [dk]); // eslint-disable-line react-hooks/exhaustive-deps
   const isToday = dk === dateKey(TODAY);
   const isFuture = startOfDay(viewDate) > TODAY;
   const isPast = !isToday && startOfDay(viewDate) < TODAY;
@@ -849,6 +831,7 @@ export default function Today({ user, onSignOut }) {
         rangeLabel={rangeLabel}
       />
 
+      <Animated.View style={{ opacity: dayFade }}>
       <Hero
         scheduleMode={scheduleMode}
         isToday={isToday}
@@ -874,19 +857,18 @@ export default function Today({ user, onSignOut }) {
         onEditAnchor={onEditAnchor}
       />
 
-      {/* Slot list container */}
-      <View style={{ borderRadius: theme.radius.surface, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: theme.surface.card, padding: spacing.md, marginBottom: spacing.md }}>
-        {homeSupps.length === 0 ? (
-          <View style={{ alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md }}>
-            <Heading level={2} visual="display" font="heading" style={{ color: theme.text.secondary, marginBottom: spacing.md }}>◯</Heading>
-            <Text weight="semibold" style={{ marginBottom: spacing.xs }}>No items yet</Text>
-            <Heading level={2} visual="caption" font="heading" weight="medium" style={{ color: theme.text.secondary, marginBottom: spacing.lg, textAlign: 'center', lineHeight: 21 }}>Add your first to begin tracking.</Heading>
-            {!isPast ? <Button variant="primary" fullWidth onPress={openAdd}>Add an item to protocol</Button> : null}
-          </View>
-        ) : (
-          <View style={{ gap: spacing.sm }}>{cards}</View>
-        )}
-      </View>
+      {/* Floating slot cards — no outer wrapper; each card sits on the canvas. */}
+      {homeSupps.length === 0 ? (
+        <View style={{ borderRadius: theme.radius.surface, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: theme.surface.card, alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
+          <Heading level={2} visual="display" font="heading" style={{ color: theme.text.secondary, marginBottom: spacing.md }}>◯</Heading>
+          <Text weight="semibold" style={{ marginBottom: spacing.xs }}>No items yet</Text>
+          <Heading level={2} visual="caption" font="heading" weight="medium" style={{ color: theme.text.secondary, marginBottom: spacing.lg, textAlign: 'center', lineHeight: 21 }}>Add your first to begin tracking.</Heading>
+          {!isPast ? <Button variant="primary" fullWidth onPress={openAdd}>Add an item to protocol</Button> : null}
+        </View>
+      ) : (
+        <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>{cards}</View>
+      )}
+      </Animated.View>
 
     </ScrollView>
 

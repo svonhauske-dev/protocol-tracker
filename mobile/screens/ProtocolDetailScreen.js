@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { View, ScrollView, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, MoreHorizontal, Plus, Pause, Play, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, MoreHorizontal, Plus, Pause, Play, Trash2 } from 'lucide-react-native';
 import { isActiveSupp, isPausedSupp } from 'shared/lib/time';
 import { Heading, Text, Button, Badge } from '../components';
 import CategoryIcon from '../components/CategoryIcon';
 import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
+import IconButton from '../components/IconButton';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolDetailScreen.jsx — header
@@ -15,20 +16,12 @@ import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 // of mobile v1 scope. add/edit are delegated to the parent (Today) via callbacks.
 const byName = (a, b) => a.name.localeCompare(b.name);
 
-function IconBtn({ children, onPress, label, danger }) {
-  return (
-    <Pressable onPress={onPress} accessibilityLabel={label} hitSlop={8} style={{ width: touch.min, height: touch.min, alignItems: 'center', justifyContent: 'center' }}>
-      {children}
-    </Pressable>
-  );
+function IconBtn({ children, onPress, label }) {
+  return <IconButton bare onPress={onPress} accessibilityLabel={label}>{children}</IconButton>;
 }
 
 function BorderedIconBtn({ children, onPress, label }) {
-  return (
-    <Pressable onPress={onPress} accessibilityLabel={label} style={{ width: touch.min, height: touch.min, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, borderRadius: theme.radius.button, alignItems: 'center', justifyContent: 'center' }}>
-      {children}
-    </Pressable>
-  );
+  return <IconButton onPress={onPress} accessibilityLabel={label}>{children}</IconButton>;
 }
 
 function SuppRow({ supp, onPress, isLast, right, multiline }) {
@@ -108,7 +101,7 @@ export default function ProtocolDetailScreen({
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
-        <BorderedIconBtn label="Back" onPress={onBack}><ChevronLeft size={icon.sm} color={theme.text.secondary} /></BorderedIconBtn>
+        <BorderedIconBtn label="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></BorderedIconBtn>
 
         {editingName ? (
           <TextInput allowFontScaling maxFontSizeMultiplier={1.4}

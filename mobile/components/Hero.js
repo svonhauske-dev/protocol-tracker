@@ -28,8 +28,10 @@ function getHeroState({
     const pastEyebrow = { text: `Viewing ${dateStr}`, suffix: isReadOnly ? 'read-only' : 'editing', suffixTone: isReadOnly ? 'muted' : 'accent' };
     const completionLine = coreTotal === 0 ? 'No items logged' : allDone ? 'Completed' : completionText;
     if (isAnchor && effectivePill) {
-      if (allDone) return { eyebrow: pastEyebrow, status: 'Completed', statusIsDone: true, submeta: `Anchor at ${effectivePill}`, statusKind: 'text' };
-      return { eyebrow: pastEyebrow, status: `Anchor at ${effectivePill}`, submeta: completionLine, statusKind: 'text' };
+      // Match today's treatment: "STARTED AT" eyebrow + the time as the big number.
+      const startedEyebrow = { text: 'Started at', suffix: isReadOnly ? 'read-only' : 'editing', suffixTone: isReadOnly ? 'muted' : 'accent' };
+      if (allDone) return { eyebrow: startedEyebrow, status: 'Completed', statusIsDone: true, submeta: `Started at ${effectivePill}`, statusKind: 'text' };
+      return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionLine, statusKind: 'time' };
     }
     if (isAnchor) {
       if (allDone) return { eyebrow: pastEyebrow, status: 'Completed', statusIsDone: true, submeta: 'No anchor recorded', statusKind: 'text' };

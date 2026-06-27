@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, LayoutAnimation, UIManager, Platform } from 'react-native';
 import { Pencil, ChevronDown, Clock, Check } from 'lucide-react-native';
 import Text from './Text';
 import Heading from './Heading';
@@ -12,6 +12,13 @@ import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 // collapsible body (auto-expand now/late), take-all icon button in the header,
 // category icons, dose·notes subline, and the pinned-time `single` mode.
 // Deferred: the "log at…" pill (needs the native time picker — Phase 5).
+
+// Android needs this opt-in for LayoutAnimation; iOS has it on by default.
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+// Gentle, consistent collapse/expand easing.
+const EXPAND_ANIM = { duration: 220, create: { type: 'easeInEaseOut', property: 'opacity' }, update: { type: 'easeInEaseOut' }, delete: { type: 'easeInEaseOut', property: 'opacity' } };
 
 const statusColors = () => ({
   done: { border: theme.border.subtle, bg: theme.surface.cardSubtle, hbg: 'transparent', badge: null },
@@ -183,7 +190,7 @@ export default function SlotCard({
 
         {/* Expand toggle */}
         <Pressable
-          onPress={() => setExpanded((e) => !e)}
+          onPress={() => { LayoutAnimation.configureNext(EXPAND_ANIM); setExpanded((e) => !e); }}
           style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, paddingRight: spacing.md, paddingLeft: spacing.xs }}
         >
           <View style={{ flex: 1, minWidth: 0 }}>

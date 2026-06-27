@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import { View, ScrollView, Pressable, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
 import { Heading, Label, Text, Button, Row, Input, Checkbox } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
+import IconButton from '../components/IconButton';
 import ScheduleTab from './ScheduleTab';
 import SlideScreen from '../components/SlideScreen';
 import { theme, spacing, typography, touch, icon } from '../theme';
@@ -137,13 +138,7 @@ export default function SettingsScreen({
         borderBottomColor: theme.border.subtle,
       }}
     >
-      <Pressable
-        onPress={onBackPress}
-        accessibilityLabel="Back"
-        style={{ width: touch.min, height: touch.min, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center' }}
-      >
-        <ChevronLeft size={icon.sm} color={theme.text.secondary} />
-      </Pressable>
+      <IconButton onPress={onBackPress} accessibilityLabel="Back"><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
       <Heading level={1} visual="body" font="body">{title}</Heading>
       <View style={{ width: touch.min }} />
     </View>

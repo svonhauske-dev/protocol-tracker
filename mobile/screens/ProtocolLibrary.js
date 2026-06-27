@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Plus } from 'lucide-react-native';
+import { ArrowLeft, Plus } from 'lucide-react-native';
 import { shortDate } from 'shared/lib/time';
 import { Heading, Label, Text, Button, Input, Row, HelperText } from '../components';
 import DateRangeField from '../components/DateRangeField';
 import Modal from '../components/Modal';
 import TabBar from '../components/TabBar';
+import IconButton from '../components/IconButton';
 import { theme, spacing, typography, touch, icon } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolLibrary.jsx — list
@@ -28,15 +29,7 @@ const DURATION_UNITS = ['days', 'weeks', 'months'];
 const errStyle = { fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs };
 
 function IconBtn({ children, onPress, label }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityLabel={label}
-      style={{ width: touch.min, height: touch.min, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, borderRadius: theme.radius.button, alignItems: 'center', justifyContent: 'center' }}
-    >
-      {children}
-    </Pressable>
-  );
+  return <IconButton onPress={onPress} accessibilityLabel={label}>{children}</IconButton>;
 }
 
 function ProtocolRow({ protocol, count, onTap }) {
@@ -143,7 +136,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
-        <IconBtn label="Back" onPress={onBack}><ChevronLeft size={icon.sm} color={theme.text.secondary} /></IconBtn>
+        <IconBtn label="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconBtn>
         <Heading level={1} visual="body" font="body">Protocols</Heading>
         <IconBtn label="New protocol" onPress={() => setShowNew(true)}><Plus size={icon.sm} color={theme.text.secondary} /></IconBtn>
       </View>

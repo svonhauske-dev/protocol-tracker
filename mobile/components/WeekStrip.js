@@ -1,9 +1,10 @@
 import { View, Pressable } from 'react-native';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { dateKey } from 'shared/lib/time';
 import { calculateAdherenceForDate } from 'shared/lib/adherence';
 import Text from './Text';
 import AdherenceRing from './AdherenceRing';
+import IconButton from './IconButton';
 import { theme, spacing, fonts, typography, icon, shadow, letterSpacing as LS } from '../theme';
 
 // 7-day navigator (RN port of src/components/WeekStrip.jsx, compact/mobile mode).
@@ -21,12 +22,8 @@ export default function WeekStrip({
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.semibold, letterSpacing: LS.labelWide, textTransform: 'uppercase' }}>{`// ${rangeLabel}`}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Pressable onPress={onPrev} accessibilityRole="button" accessibilityLabel="Previous week" hitSlop={10} style={{ width: 30, height: 30, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center' }}>
-            <ChevronLeft size={icon.xs} color={theme.text.secondary} />
-          </Pressable>
-          <Pressable onPress={canNext ? onNext : undefined} disabled={!canNext} accessibilityRole="button" accessibilityLabel="Next week" hitSlop={10} style={{ width: 30, height: 30, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center', opacity: canNext ? 1 : 0.35 }}>
-            <ChevronRight size={icon.xs} color={canNext ? theme.text.secondary : theme.text.tertiary} />
-          </Pressable>
+          <IconButton size={32} onPress={onPrev} accessibilityLabel="Previous week"><ArrowLeft size={icon.xs} color={theme.text.secondary} /></IconButton>
+          <IconButton size={32} onPress={canNext ? onNext : undefined} disabled={!canNext} accessibilityLabel="Next week"><ArrowRight size={icon.xs} color={theme.text.secondary} /></IconButton>
         </View>
       </View>
 
