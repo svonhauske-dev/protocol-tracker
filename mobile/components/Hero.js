@@ -25,11 +25,14 @@ function getHeroState({
   }
 
   if (isPast) {
-    const pastEyebrow = { text: `Viewing ${dateStr}`, suffix: isReadOnly ? 'read-only' : 'editing', suffixTone: isReadOnly ? 'muted' : 'accent' };
+    // Clean eyebrow like today (no long date — the week strip shows the day),
+    // just the read-only / editing state.
+    const pastSuffix = isReadOnly ? 'read-only' : 'editing';
+    const pastEyebrow = { text: isReadOnly ? 'Read-only' : 'Editing' };
     const completionLine = coreTotal === 0 ? 'No items logged' : allDone ? 'Completed' : completionText;
     if (isAnchor && effectivePill) {
       // Match today's treatment: "STARTED AT" eyebrow + the time as the big number.
-      const startedEyebrow = { text: 'Started at', suffix: isReadOnly ? 'read-only' : 'editing', suffixTone: isReadOnly ? 'muted' : 'accent' };
+      const startedEyebrow = { text: 'Started at', suffix: pastSuffix, suffixTone: isReadOnly ? 'muted' : 'accent' };
       if (allDone) return { eyebrow: startedEyebrow, status: 'Completed', statusIsDone: true, submeta: `Started at ${effectivePill}`, statusKind: 'text' };
       return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionLine, statusKind: 'time' };
     }

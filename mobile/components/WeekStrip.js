@@ -53,18 +53,16 @@ export default function WeekStrip({
                 ...(isSelected ? { zIndex: 1, transform: [{ scale: 1.02 }], ...shadow.elevated } : null),
               }}
             >
-              {/* TODAY tag — floats ABOVE the cell so no cell reserves height for it. */}
+              {/* TODAY tag — floats ABOVE the cell (no reserved height); clean white text. */}
               {isToday ? (
-                <View style={{ position: 'absolute', top: -8, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
-                  <View style={{ paddingHorizontal: 4, paddingVertical: 1, borderRadius: theme.radius.pill, backgroundColor: theme.status.nowBadgeBg }}>
-                    <Text
-                      allowFontScaling={false}
-                      includeFontPadding={false}
-                      style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.status.nowBadgeText, fontFamily: fonts.mono.semibold, letterSpacing: 0.6, transform: [{ translateY: 1.5 }] }}
-                    >
-                      TODAY
-                    </Text>
-                  </View>
+                <View style={{ position: 'absolute', top: -9, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
+                  <Text
+                    allowFontScaling={false}
+                    includeFontPadding={false}
+                    style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.text.primary, fontFamily: fonts.mono.semibold, letterSpacing: 1 }}
+                  >
+                    TODAY
+                  </Text>
                 </View>
               ) : null}
               <Text style={{ fontSize: typography.caption2, color: theme.text.secondary, fontFamily: fonts.mono.regular, marginBottom: spacing.xxs }}>{DAYS_SHORT[date.getDay()]}</Text>
