@@ -19,7 +19,7 @@ export default function WeekStrip({
 }) {
   return (
     <View style={{ marginBottom: spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.semibold, letterSpacing: LS.labelWide, textTransform: 'uppercase' }}>{`// ${rangeLabel}`}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton size={32} onPress={onPrev} accessibilityLabel="Previous week"><ArrowLeft size={icon.xs} color={theme.text.secondary} /></IconButton>
@@ -53,23 +53,12 @@ export default function WeekStrip({
                 ...(isSelected ? { zIndex: 1, transform: [{ scale: 1.02 }], ...shadow.elevated } : null),
               }}
             >
-              {/* TODAY tag — floats ABOVE the cell (no reserved height). Bordered
-                  badge with a canvas fill so it reads cleanly over the cell edge. */}
-              {isToday ? (
-                <View style={{ position: 'absolute', top: -18, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
-                  <View style={{ paddingHorizontal: 5, paddingTop: 2, paddingBottom: 1, borderRadius: theme.radius.pill, borderWidth: theme.borderWidth.default, borderColor: theme.border.strong, backgroundColor: theme.surface.backdrop }}>
-                    <Text
-                      allowFontScaling={false}
-                      includeFontPadding={false}
-                      style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.text.primary, fontFamily: fonts.mono.semibold, letterSpacing: 1, transform: [{ translateY: 1 }] }}
-                    >
-                      TODAY
-                    </Text>
-                  </View>
-                </View>
-              ) : null}
-              <Text style={{ fontSize: typography.caption2, color: theme.text.secondary, fontFamily: fonts.mono.regular, marginBottom: spacing.xxs }}>{DAYS_SHORT[date.getDay()]}</Text>
-              <Text style={{ fontSize: typography.caption, color: theme.text.primary, fontFamily: isSelected ? fonts.mono.semibold : fonts.mono.regular, marginBottom: spacing.xs }}>{date.getDate()}</Text>
+              <Text style={{ fontSize: typography.caption2, color: isToday ? theme.text.primary : theme.text.secondary, fontFamily: fonts.mono.regular, marginBottom: spacing.xxs }}>{DAYS_SHORT[date.getDay()]}</Text>
+              {/* TODAY = the date in a filled chip (terminal-inverted). The transparent
+                  chip on other days keeps every cell the same height (aligned). */}
+              <View style={{ paddingHorizontal: 6, paddingVertical: 2, marginBottom: spacing.xs, borderRadius: theme.radius.badge, backgroundColor: isToday ? theme.text.primary : 'transparent' }}>
+                <Text style={{ fontSize: typography.caption, color: isToday ? theme.surface.canvas : theme.text.primary, fontFamily: (isSelected || isToday) ? fonts.mono.semibold : fonts.mono.regular }}>{date.getDate()}</Text>
+              </View>
               {pct !== null ? (
                 <AdherenceRing percentage={pct} size={RING} showText={false} />
               ) : (
