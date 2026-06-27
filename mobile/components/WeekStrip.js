@@ -19,7 +19,7 @@ export default function WeekStrip({
 }) {
   return (
     <View style={{ marginBottom: spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
         <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.semibold, letterSpacing: LS.labelWide, textTransform: 'uppercase' }}>{`// ${rangeLabel}`}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton size={32} onPress={onPrev} accessibilityLabel="Previous week"><ArrowLeft size={icon.xs} color={theme.text.secondary} /></IconButton>
@@ -53,22 +53,20 @@ export default function WeekStrip({
                 ...(isSelected ? { zIndex: 1, transform: [{ scale: 1.02 }], ...shadow.elevated } : null),
               }}
             >
-              {/* TODAY pill slot — web compact: height 14; pill caption2(10), padding 1px 4px */}
-              <View style={{ height: 14, marginBottom: spacing.xxs, justifyContent: 'center', alignItems: 'center' }}>
-                {isToday ? (
+              {/* TODAY tag — floats ABOVE the cell so no cell reserves height for it. */}
+              {isToday ? (
+                <View style={{ position: 'absolute', top: -8, left: 0, right: 0, alignItems: 'center', zIndex: 2 }}>
                   <View style={{ paddingHorizontal: 4, paddingVertical: 1, borderRadius: theme.radius.pill, backgroundColor: theme.status.nowBadgeBg }}>
                     <Text
                       allowFontScaling={false}
                       includeFontPadding={false}
-                      // JetBrains Mono caps sit high in the line box; nudge down to
-                      // optically center (re-measured for the 10px size).
                       style={{ fontSize: typography.caption2, lineHeight: typography.caption2, color: theme.status.nowBadgeText, fontFamily: fonts.mono.semibold, letterSpacing: 0.6, transform: [{ translateY: 1.5 }] }}
                     >
                       TODAY
                     </Text>
                   </View>
-                ) : null}
-              </View>
+                </View>
+              ) : null}
               <Text style={{ fontSize: typography.caption2, color: theme.text.secondary, fontFamily: fonts.mono.regular, marginBottom: spacing.xxs }}>{DAYS_SHORT[date.getDay()]}</Text>
               <Text style={{ fontSize: typography.caption, color: theme.text.primary, fontFamily: isSelected ? fonts.mono.semibold : fonts.mono.regular, marginBottom: spacing.xs }}>{date.getDate()}</Text>
               {pct !== null ? (

@@ -117,12 +117,12 @@ export default function Hero(props) {
 
           {/* Status */}
           {state.status ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, minHeight: 44 }}>
               <Heading level={2} visual={statusVisual} weight="bold" font="heading" numberOfLines={1} style={{ color: statusColor, flexShrink: 1 }}>
                 {state.status}
               </Heading>
               {state.canEditAnchor && !isReadOnly && onEditAnchor ? (
-                <Pressable onPress={onEditAnchor} hitSlop={{ top: 15, bottom: 15, left: 14, right: 14 }} accessibilityRole="button" accessibilityLabel="Edit anchor time">
+                <Pressable onPress={onEditAnchor} hitSlop={{ top: 15, bottom: 15, left: 14, right: 14 }} accessibilityRole="button" accessibilityLabel="Edit anchor time" style={{ marginBottom: 5 }}>
                   <Text tone="tertiary" size="label">edit</Text>
                 </Pressable>
               ) : null}
