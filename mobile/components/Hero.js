@@ -25,22 +25,21 @@ function getHeroState({
   }
 
   if (isPast) {
-    // Clean eyebrow like today (no long date — the week strip shows the day),
-    // just the read-only / editing state.
+    // Clean eyebrow like today (no long date — the week strip shows the day).
     const pastSuffix = isReadOnly ? 'read-only' : 'editing';
     const pastEyebrow = { text: isReadOnly ? 'Read-only' : 'Editing' };
-    const completionLine = coreTotal === 0 ? 'No items logged' : allDone ? 'Completed' : completionText;
+    const startedEyebrow = { text: 'Started at', suffix: pastSuffix, suffixTone: isReadOnly ? 'muted' : 'accent' };
+    // Completed → big green "Completed" (display size, like the time) + "N of N done".
+    if (allDone && coreTotal > 0) {
+      return { eyebrow: pastEyebrow, status: 'Completed', statusIsDone: true, submeta: completionText, statusKind: 'time' };
+    }
     if (isAnchor && effectivePill) {
-      // Match today's treatment: "STARTED AT" eyebrow + the time as the big number.
-      const startedEyebrow = { text: 'Started at', suffix: pastSuffix, suffixTone: isReadOnly ? 'muted' : 'accent' };
-      if (allDone) return { eyebrow: startedEyebrow, status: 'Completed', statusIsDone: true, submeta: `Started at ${effectivePill}`, statusKind: 'text' };
-      return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionLine, statusKind: 'time' };
+      return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionText || 'Add items to start tracking', statusKind: 'time' };
     }
     if (isAnchor) {
-      if (allDone) return { eyebrow: pastEyebrow, status: 'Completed', statusIsDone: true, submeta: 'No anchor recorded', statusKind: 'text' };
-      return { eyebrow: pastEyebrow, status: 'No anchor recorded', submeta: coreTotal === 0 ? null : completionLine, statusKind: 'text' };
+      return { eyebrow: pastEyebrow, status: 'No anchor recorded', submeta: completionText, statusKind: 'text' };
     }
-    return { eyebrow: pastEyebrow, status: completionLine, statusIsDone: allDone, submeta: null, statusKind: 'text' };
+    return { eyebrow: pastEyebrow, status: coreTotal === 0 ? 'No items logged' : completionText, submeta: null, statusKind: 'text' };
   }
 
   const todayEyebrowText = `Viewing Today, ${dateStr}`;
