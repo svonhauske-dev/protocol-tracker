@@ -65,9 +65,10 @@ function getHeroState({
     return { eyebrow: { text: todayEyebrowText }, status: 'Not started yet', submeta: null, statusKind: 'text', showSetAnchor: true };
   }
   const anchorLine = `Started at ${effectivePill}`;
-  if (allDone) return { eyebrow: { text: todayEyebrowText }, status: 'Done for today', statusIsDone: true, submeta: anchorLine, statusKind: 'text', canEditAnchor: true };
-  if (!completionText) return { eyebrow: { text: todayEyebrowText }, status: anchorLine, submeta: 'Add items to start tracking', statusKind: 'text', canEditAnchor: true };
-  return { eyebrow: { text: todayEyebrowText }, status: anchorLine, submeta: completionText, statusKind: 'text', canEditAnchor: true };
+  if (allDone) return { eyebrow: { text: 'Started at' }, status: 'Done for today', statusIsDone: true, submeta: anchorLine, statusKind: 'text', canEditAnchor: true };
+  // Eyebrow = "STARTED AT"; the time is the big number (the date is redundant — the picker shows it).
+  if (!completionText) return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: 'Add items to start tracking', statusKind: 'time', canEditAnchor: true };
+  return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: completionText, statusKind: 'time', canEditAnchor: true };
 }
 
 const START_LABELS = { medication: 'Start my day', wakeup: 'Start my day' };

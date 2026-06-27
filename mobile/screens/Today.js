@@ -817,7 +817,11 @@ export default function Today({ user, onSignOut }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1, minWidth: 0 }}>
           <Avatar initial={initial} onPress={() => setShowSettings(true)} />
-          <Heading level={1} visual="body" weight="medium" font="body" style={{ color: theme.text.tertiary }}>{firstName}</Heading>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
+            <Heading level={1} visual="body" weight="medium" font="body" numberOfLines={1} style={{ color: theme.text.secondary, textTransform: 'lowercase' }}>{firstName}</Heading>
+            {/* static terminal prompt cursor — the one quiet brand nod */}
+            <View style={{ width: 7, height: 15, backgroundColor: theme.accent.default, marginLeft: 5 }} />
+          </View>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} color={theme.text.secondary} /></IconButton>

@@ -22,7 +22,32 @@ import {
 export { spacing, radius, icon, touch, layout };
 
 // ── Active theme (colors). Hex + rgba() strings are valid in RN. ────────────
-export const theme = themes.achromatic;
+// Elevated terminal: the achromatic base + ONE signature color — phosphor green
+// (#5FE090, the shared success token) as the accent, used on live moments
+// (rings, checks, active/now, selected). Overridden here (mobile only); the
+// shared web design-system.js is never edited.
+const ACCENT = '#5FE090';
+export const theme = {
+  ...themes.achromatic,
+  accent: {
+    ...themes.achromatic.accent,
+    default: ACCENT,
+    hover: 'rgba(95,224,144,0.85)',
+    subtle: 'rgba(95,224,144,0.12)',
+    border: 'rgba(95,224,144,0.40)',
+    onSubtle: ACCENT,
+    track: 'rgba(95,224,144,0.12)',
+  },
+  status: {
+    ...themes.achromatic.status,
+    // "now"/active highlight switches from white to the green signature.
+    nowBorder: 'rgba(95,224,144,0.45)',
+    nowBg: 'rgba(95,224,144,0.06)',
+    nowHover: 'rgba(95,224,144,0.10)',
+    nowBadgeBg: 'rgba(95,224,144,0.16)',
+    nowBadgeText: ACCENT,
+  },
+};
 
 // ── Typography ──────────────────────────────────────────────────────────────
 // Sizes port as-is. Font families become the names expo-font loads. RN

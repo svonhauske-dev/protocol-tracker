@@ -18,14 +18,16 @@ export default function WeekStrip({
 }) {
   return (
     <View style={{ marginBottom: spacing.md }}>
-      <View style={styles.nav}>
-        <Pressable onPress={onPrev} accessibilityRole="button" accessibilityLabel="Previous week" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <ChevronLeft size={icon.sm} color={theme.text.secondary} />
-        </Pressable>
-        <Text tone="secondary" size="label" style={{ fontFamily: fonts.mono.semibold, letterSpacing: LS.labelWide, textTransform: 'uppercase' }}>{rangeLabel}</Text>
-        <Pressable onPress={canNext ? onNext : undefined} disabled={!canNext} accessibilityRole="button" accessibilityLabel="Next week" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <ChevronRight size={icon.sm} color={canNext ? theme.text.secondary : theme.text.tertiary} style={{ opacity: canNext ? 1 : 0.3 }} />
-        </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+        <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.semibold, letterSpacing: LS.labelWide, textTransform: 'uppercase' }}>{`// ${rangeLabel}`}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <Pressable onPress={onPrev} accessibilityRole="button" accessibilityLabel="Previous week" hitSlop={10} style={{ width: 30, height: 30, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center' }}>
+            <ChevronLeft size={icon.xs} color={theme.text.secondary} />
+          </Pressable>
+          <Pressable onPress={canNext ? onNext : undefined} disabled={!canNext} accessibilityRole="button" accessibilityLabel="Next week" hitSlop={10} style={{ width: 30, height: 30, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center', opacity: canNext ? 1 : 0.35 }}>
+            <ChevronRight size={icon.xs} color={canNext ? theme.text.secondary : theme.text.tertiary} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing.xxs }}>
