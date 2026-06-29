@@ -260,7 +260,7 @@ export default function ProtocolDetailScreen({
         <Text allowFontScaling maxFontSizeMultiplier={1.4} tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 21 }}>
           {`send "${protocol.name}" to another origin user by email. they choose to add it on top, replace their current one, or save it.`}
         </Text>
-        <SectionHeader rule={false}>recipient</SectionHeader>
+        <SectionHeader>recipient</SectionHeader>
         <Input
           value={sendEmail}
           onChangeText={(v) => { setSendEmail(v); setSendErr(''); }}

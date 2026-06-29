@@ -235,12 +235,12 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
         {step === 'form' ? (
           <View>
             <View style={{ marginBottom: spacing.md }}>
-              <SectionHeader rule={false}>Name</SectionHeader>
+              <SectionHeader>Name</SectionHeader>
               <Input value={newName} onChangeText={setNewName} placeholder="e.g. Immunity Protocol" autoCapitalize="words" />
             </View>
 
             <View style={{ marginBottom: spacing.md }}>
-              <SectionHeader rule={false}>Duration</SectionHeader>
+              <SectionHeader>Duration</SectionHeader>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
                 {[['indefinite', 'indefinite'], ['scheduled', 'scheduled']].map(([val, label]) => (
                   <Button key={val} variant="selector" active={txMode === val} style={{ flex: 1 }} onPress={() => setTxMode(val)}>{label}</Button>
