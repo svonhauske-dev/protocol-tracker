@@ -121,19 +121,22 @@ function NumberCard({ label, fields }) {
       ))}
     </View>
   );
+  // De-boxed: no enclosing Card (the steppers are already bordered cells —
+  // box-in-box reads heavy). Label + steppers sit on the canvas; the caption
+  // (rendered by the caller) trails as a quiet sub-line.
   if (dual) {
     return (
-      <Card style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: 0, gap: spacing.xs }}>
+      <View style={{ gap: spacing.xs }}>
         <Text tone="secondary" size="caption">{label}</Text>
         {steppers}
-      </Card>
+      </View>
     );
   }
   return (
-    <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: 0 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
       <Text tone="secondary" size="caption" style={{ flex: 1 }}>{label}</Text>
       {steppers}
-    </Card>
+    </View>
   );
 }
 
@@ -274,13 +277,13 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         ))}
       </View>
       {em === 'fixed' ? (
-        <TimeRow label="Evening time" value={localConfig.evening_time || ''} onChange={(v) => updateEvening({ evening_mode: 'fixed', evening_time: v || null })} />
+        <TimeRow label="evening time" value={localConfig.evening_time || ''} onChange={(v) => updateEvening({ evening_mode: 'fixed', evening_time: v || null })} />
       ) : null}
       {em === 'before_sleep' ? (
         <View style={{ gap: spacing.xs }}>
-          <TimeRow label="Bedtime" value={localConfig.sleep_time || ''} onChange={(v) => updateEvening({ evening_mode: 'before_sleep', sleep_time: v || null })} />
+          <TimeRow label="bedtime" value={localConfig.sleep_time || ''} onChange={(v) => updateEvening({ evening_mode: 'before_sleep', sleep_time: v || null })} />
           <NumberCard
-            label="Before bedtime"
+            label="before bedtime"
             fields={[
               { value: localConfig.evening_offset_hours ?? 1, unit: 'hr', onChange: (n) => updateEvening({ evening_mode: 'before_sleep', evening_offset_hours: n }) },
               { value: localConfig.evening_offset_minutes ?? 0, unit: 'min', onChange: (n) => updateEvening({ evening_mode: 'before_sleep', evening_offset_minutes: n }) },
@@ -368,8 +371,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             <SectionHeader>Meal schedule</SectionHeader>
             <View style={{ gap: spacing.xs }}>
               {[
-                { key_h: 'first_meal_offset_hours', key_m: 'first_meal_offset_minutes', label: 'First meal', caption: 'hours after your anchor' },
-                { key_h: 'meal_interval_hours', key_m: 'meal_interval_minutes', label: 'Meal interval', caption: 'hours between meals' },
+                { key_h: 'first_meal_offset_hours', key_m: 'first_meal_offset_minutes', label: 'first meal', caption: 'hours after your anchor' },
+                { key_h: 'meal_interval_hours', key_m: 'meal_interval_minutes', label: 'meal interval', caption: 'hours between meals' },
               ].map(({ key_h, key_m, label, caption }) => (
                 <View key={key_h}>
                   <NumberCard
@@ -388,7 +391,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           <View style={{ marginBottom: spacing.md }}>
             <SectionHeader>Pre-meal window</SectionHeader>
             <HelperText>how early before each meal to schedule pre-meal items</HelperText>
-            <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
+            <NumberCard label="pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
           </View>
 
           <EveningEditor />
@@ -431,7 +434,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           <View style={{ marginBottom: spacing.md }}>
             <SectionHeader>Pre-meal window</SectionHeader>
             <HelperText>how early before each meal to take pre-meal items</HelperText>
-            <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
+            <NumberCard label="pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
           </View>
           <EveningEditor />
         </View>
@@ -450,7 +453,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </View>
           <View style={{ marginBottom: spacing.lg }}>
             <SectionHeader>Pre-meal window</SectionHeader>
-            <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
+            <NumberCard label="pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
             <HelperText style={{ marginTop: spacing.xxxs, marginBottom: 0 }}>pre-breakfast, pre-lunch, and pre-dinner slots are scheduled this many minutes before their meal</HelperText>
           </View>
         </>
