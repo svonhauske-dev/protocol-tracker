@@ -171,12 +171,6 @@ export default function SettingsScreen({
           </View>
         </View>
 
-        {/* shell prompt heading the screen */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
-          <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
-          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --config</Text>
-          <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
-        </View>
 
         <SectionHeader>protocol</SectionHeader>
         <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle, marginBottom: spacing.lg }}>
@@ -208,12 +202,6 @@ export default function SettingsScreen({
           {header(TITLES.account, () => setView('main'))}
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView {...scrollProps}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
-              <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
-              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --account</Text>
-              <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
-            </View>
-
             <SectionHeader>name</SectionHeader>
             <View style={{ marginBottom: spacing.lg }}>
               <Input value={displayName} onChangeText={handleDisplayNameChange} placeholder="e.g. Sofia von Hauske" autoComplete="name" autoCapitalize="words" />

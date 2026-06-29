@@ -171,12 +171,6 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
-          <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
-          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --library</Text>
-          <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
-        </View>
-
         {received.length > 0 ? (
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>received</SectionHeader>
