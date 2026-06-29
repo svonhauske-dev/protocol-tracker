@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Origin — Elevated Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0d0d0d;          /* canvas */
+    --card:#141414;        /* elevated surface */
+    --ink:#f4f4f2;         /* primary */
+    --muted:#8a8a86;       /* secondary */
+    --dim:#5a5a57;         /* tertiary / metadata */
+    --line:#262626;        /* hairline */
+    --line-bright:#3a3a3a; /* hairline emphasis */
+    --accent:#5fe090;      /* phosphor green — the one signature color, live moments only */
+    --mono:'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --grotesk:'Space Grotesk', var(--mono);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{background:#000;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px 16px;font-family:var(--mono);}
+
+  .device{width:412px;max-width:100%;padding:11px;border-radius:58px;
+    background:linear-gradient(150deg,#222,#0a0a0a 45%,#141414);
+    box-shadow:0 0 0 1.5px #000,0 48px 110px -30px rgba(0,0,0,.85);}
+  .screen{position:relative;width:390px;max-width:100%;height:830px;overflow:hidden;border-radius:48px;background:var(--bg);}
+  /* faint top vignette — the only "atmosphere", barely there */
+  .screen::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.035), transparent 60%);}
+
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:112px;height:33px;background:#000;border-radius:20px;z-index:5;}
+  .statusbar{position:relative;z-index:3;height:54px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 8px;
+    font-family:-apple-system,system-ui,sans-serif;font-size:15px;font-weight:600;color:var(--ink);}
+  .statusbar .ind{display:flex;align-items:center;gap:6px;}
+
+  .scroll{position:relative;z-index:2;height:calc(830px - 54px);overflow-y:auto;padding:4px 22px 40px;}
+  .scroll::-webkit-scrollbar{display:none;}
+
+  /* tiny tracked terminal label */
+  .label{font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);}
+  .label .mk{color:var(--muted);}
+
+  /* ── header ── */
+  .header{display:flex;align-items:center;gap:13px;padding:10px 0 22px;}
+  .avatar{width:42px;height:42px;flex:0 0 auto;border:1px solid var(--line-bright);display:grid;place-items:center;
+    font-size:15px;font-weight:600;color:var(--ink);position:relative;}
+  .avatar::after{content:"";position:absolute;width:4px;height:4px;border-radius:50%;background:var(--ink);
+    right:-1px;bottom:-1px;box-shadow:0 0 0 2px var(--bg);} /* the origin "center point" mark */
+  .uname{flex:1;font-size:16px;color:var(--muted);letter-spacing:.5px;}
+  .uname b{color:var(--ink);font-weight:500;}
+  .cursor{display:inline-block;width:8px;height:16px;background:var(--accent);vertical-align:-2px;margin-left:3px;}
+  .iconbtn{width:42px;height:42px;flex:0 0 auto;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);}
+
+  /* ── week ── */
+  .weekhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .weekhead .nav{display:flex;gap:6px;}
+  .weekhead .nav span{width:22px;height:22px;border:1px solid var(--line);display:grid;place-items:center;color:var(--dim);font-size:11px;}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:30px;}
+  .day{position:relative;border:1px solid var(--line);padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:7px;}
+  .day .wd{font-size:10px;letter-spacing:1px;color:var(--dim);}
+  .day .dn{font-size:15px;font-weight:500;color:var(--muted);}
+  .day.sel{background:rgba(95,224,144,.07);border-color:var(--accent);}   /* active = green-accented cell */
+  .day.sel .dn{color:var(--ink);font-weight:700;}
+  .day .ring{width:22px;height:22px;}
+  .today-tag{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:1.5px;
+    color:var(--accent);font-weight:600;}
+
+  /* ── hero (rings motif as the signature) ── */
+  .hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+    padding-bottom:26px;margin-bottom:8px;border-bottom:1px solid var(--line);}
+  .hero .eyebrow{margin-bottom:16px;}
+  .hero .time{font-family:var(--grotesk);font-size:48px;font-weight:700;letter-spacing:-1.5px;line-height:.92;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .hero .timeline{display:flex;align-items:baseline;gap:12px;}
+  .hero .meta{margin-top:14px;display:flex;align-items:center;gap:10px;}
+  .hero .meta .n{font-size:15px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
+  .hero .meta .t{font-size:13px;color:var(--dim);letter-spacing:1px;}
+  .hero .edit{font-size:12px;color:var(--dim);letter-spacing:1px;border-bottom:1px solid var(--line-bright);padding-bottom:1px;}
+  .rings{position:relative;width:96px;height:96px;flex:0 0 auto;}
+  .rings .pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--grotesk);font-size:21px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+  .rt{fill:none;stroke:var(--line-bright);} .rf{fill:none;stroke:var(--accent);stroke-linecap:round;}
+
+  /* ── section ── */
+  .secthead{display:flex;align-items:center;justify-content:space-between;padding:24px 0 14px;}
+
+  /* ── task rows (sharp, hairline, mono) ── */
+  .task{border:1px solid var(--line);background:var(--card);margin-bottom:10px;}
+  .task .row{display:flex;align-items:center;gap:14px;padding:16px 16px;cursor:pointer;}
+  .check{width:22px;height:22px;flex:0 0 auto;border:1px solid var(--line-bright);display:grid;place-items:center;}
+  .check.on{background:var(--accent);border-color:var(--accent);}
+  .check.on svg{stroke:#0d0d0d;}
+  .task .body{flex:1;min-width:0;}
+  .task .title{font-family:var(--grotesk);font-size:17px;font-weight:600;color:var(--ink);letter-spacing:.2px;}
+  .task .sub{font-size:12px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-top:5px;}
+  .task .time{font-size:15px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.5px;flex:0 0 auto;}
+  .task .cv{color:var(--dim);transition:transform .2s ease;flex:0 0 auto;}
+  .task.open .cv{transform:rotate(180deg);}
+  .expand{border-top:1px solid var(--line);padding:6px 16px 14px 52px;display:none;}
+  .task.open .expand{display:block;}
+  .item{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .item .dot{width:18px;height:18px;border:1px solid var(--line-bright);flex:0 0 auto;display:grid;place-items:center;}
+  .item.done .dot{background:var(--accent);border-color:var(--accent);}
+  .item.done .dot svg{stroke:#0d0d0d;}
+  .item .nm{flex:1;font-size:15px;color:var(--ink);}
+  .item.done .nm{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--line-bright);}
+  .item .pn{color:var(--dim);}
+
+  .hint{text-align:center;color:var(--dim);font-size:11px;letter-spacing:2px;padding:24px 0 4px;}
+  .hint .bk{display:inline-block;width:7px;height:13px;background:var(--dim);vertical-align:-2px;margin-left:1px;}
+</style>
+</head>
+<body>
+  <div class="device"><div class="screen">
+    <div class="island"></div>
+    <div class="statusbar"><span>9:41</span><span class="ind">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#f4f4f2"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0.5" width="3" height="11.5" rx="1"/></svg>
+      <svg width="26" height="13" viewBox="0 0 26 13" fill="none"><rect x="1" y="1" width="21" height="11" rx="3" stroke="#f4f4f2" stroke-opacity=".5"/><rect x="2.5" y="2.5" width="16" height="8" rx="1.5" fill="#f4f4f2"/><path d="M24 4.5v4c.9-.35 1.4-.95 1.4-2s-.5-1.65-1.4-2Z" fill="#f4f4f2" fill-opacity=".5"/></svg>
+    </span></div>
+
+    <div class="scroll">
+      <!-- header -->
+      <div class="header">
+        <div class="avatar">S</div>
+        <div class="uname"><b>sofia</b><span class="cursor"></span></div>
+        <div class="iconbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="11" y1="20" x2="11" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="20" y1="20" x2="20" y2="8"/></svg></div>
+        <div class="iconbtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+      </div>
+
+      <!-- week -->
+      <div class="weekhead">
+        <div class="label"><span class="mk">//</span> JUN 20 — 26</div>
+        <div class="nav"><span>‹</span><span>›</span></div>
+      </div>
+      <div class="days">
+        <div class="day"><div class="wd">M</div><div class="dn">20</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day"><div class="wd">T</div><div class="dn">21</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day"><div class="wd">W</div><div class="dn">22</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="34" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day"><div class="wd">T</div><div class="dn">23</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day"><div class="wd">F</div><div class="dn">24</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="42" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day"><div class="wd">S</div><div class="dn">25</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke="#5a5a57" stroke-dasharray="94" stroke-dashoffset="58" transform="rotate(-90 18 18)"/></svg></div>
+        <div class="day sel"><div class="today-tag">TODAY</div><div class="wd">S</div><div class="dn">26</div><svg class="ring" viewBox="0 0 36 36"><circle class="rt" cx="18" cy="18" r="15" stroke-width="2"/><circle class="rf" cx="18" cy="18" r="15" stroke-width="2" stroke-dasharray="94" stroke-dashoffset="28" transform="rotate(-90 18 18)"/></svg></div>
+      </div>
+
+      <!-- hero -->
+      <div class="hero">
+        <div>
+          <div class="label eyebrow"><span class="mk">›</span> STARTED AT</div>
+          <div class="timeline"><span class="time">06:31</span><span class="edit">EDIT</span></div>
+          <div class="meta"><span class="n">22/27</span><span class="t">LOGGED</span></div>
+        </div>
+        <div class="rings">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <circle class="rt" cx="48" cy="48" r="42" stroke-width="5"/>
+            <circle class="rf" cx="48" cy="48" r="42" stroke-width="5" stroke-dasharray="263.9" stroke-dashoffset="50.1" transform="rotate(-90 48 48)"/>
+          </svg>
+          <span class="pct">81%</span>
+        </div>
+      </div>
+
+      <div class="secthead"><div class="label"><span class="mk">//</span> PROTOCOL — 5 BLOCKS</div></div>
+
+      <!-- tasks -->
+      <div class="task">
+        <div class="row" onclick="this.parentElement.classList.toggle('open')">
+          <div class="check on"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="body"><div class="title">Anchor Medication</div><div class="sub">3 items · done</div></div>
+          <div class="time">06:31</div>
+          <svg class="cv" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+
+      <div class="task open">
+        <div class="row" onclick="this.parentElement.classList.toggle('open')">
+          <div class="check"></div>
+          <div class="body"><div class="title">Before Breakfast</div><div class="sub">4 items · 30 min before</div></div>
+          <div class="time">07:01</div>
+          <svg class="cv" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="expand">
+          <div class="item done"><div class="dot"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="nm">Vitamin D3 · 5000 IU</div><svg class="pn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></div>
+          <div class="item"><div class="dot"></div><div class="nm">Omega-3 · 2 g</div><svg class="pn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></div>
+          <div class="item"><div class="dot"></div><div class="nm">Magnesium · 400 mg</div><svg class="pn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></div>
+        </div>
+      </div>
+
+      <div class="task">
+        <div class="row" onclick="this.parentElement.classList.toggle('open')">
+          <div class="check"></div>
+          <div class="body"><div class="title">Mid-Morning</div><div class="sub">1 item</div></div>
+          <div class="time">10:00</div>
+          <svg class="cv" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+
+      <div class="hint">› tap a block to expand<span class="bk"></span></div>
+    </div>
+  </div></div>
+</body>
+</html>
