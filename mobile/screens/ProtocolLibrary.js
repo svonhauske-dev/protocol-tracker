@@ -45,7 +45,7 @@ function ProtocolRow({ protocol, count, onTap }) {
       rightContent={onTap ? undefined : null}
       leftContent={
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text weight="medium" style={{ marginBottom: 2 }}>{protocol.name}</Text>
+          <Heading level={3} visual="title" font="heading" weight="semibold" style={{ marginBottom: 2 }}>{protocol.name}</Heading>
           <Text tone="secondary" size="caption">{sub}</Text>
         </View>
       }
@@ -183,7 +183,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
                   rightContent={<Text size="body" tone="tertiary">→</Text>}
                   leftContent={
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text weight="medium" numberOfLines={1}>{send.name}</Text>
+                      <Heading level={3} visual="title" font="heading" weight="semibold" numberOfLines={1}>{send.name}</Heading>
                       <Text tone="secondary" size="caption">{(send.supplements_snapshot || []).length} supplements</Text>
                     </View>
                   }

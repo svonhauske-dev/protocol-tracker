@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseHHMM, fmtTime, addMins } from 'shared/lib/time';
 import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets, computeIFSlotTimes } from 'shared/config';
 import { IF_SLOTS, SLOTS } from 'shared/lib/notifications';
-import { Label, SectionHeader, HelperText, Text, Button, Card, Stepper } from '../components';
+import { Heading, Label, SectionHeader, HelperText, Text, Button, Card, Stepper } from '../components';
 import PickerField from '../components/PickerField';
 import Modal from '../components/Modal';
 import { theme, spacing, typography, touch, layout, fonts } from '../theme';
@@ -140,7 +140,7 @@ function NumberCard({ label, fields }) {
 function ModeCard({ active, title, desc, onPress }) {
   return (
     <Card variant={active ? 'selected' : 'default'} onPress={onPress} style={{ flex: 1, gap: spacing.xxs, minHeight: layout.modeButtonHeight, marginBottom: 0 }}>
-      <Text weight="semibold" style={{ color: active ? theme.accent.onSubtle : theme.text.primary }}>{title}</Text>
+      <Heading level={3} visual="title" font="heading" weight="semibold" style={{ color: active ? theme.accent.onSubtle : theme.text.primary }}>{title}</Heading>
       <Text tone="secondary" size="caption">{desc}</Text>
     </Card>
   );

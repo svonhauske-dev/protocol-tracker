@@ -25,7 +25,7 @@ function ModeCard({ title, desc, selected, onPress }) {
         marginBottom: spacing.xs,
       }}
     >
-      <Text weight="semibold" style={{ color: selected ? theme.accent.onSubtle : theme.text.primary, marginBottom: spacing.xxxs }}>{title}</Text>
+      <Heading level={3} visual="title" font="heading" weight="semibold" style={{ color: selected ? theme.accent.onSubtle : theme.text.primary, marginBottom: spacing.xxxs }}>{title}</Heading>
       {desc ? <Text size="caption" tone="secondary" style={{ lineHeight: 20 }}>{desc}</Text> : null}
     </Pressable>
   );
