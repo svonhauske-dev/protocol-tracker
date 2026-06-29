@@ -56,6 +56,7 @@ import WeekStrip from '../components/WeekStrip';
 import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
 import Loader from '../components/Loader';
+import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
 import SettingsScreen from './SettingsScreen';
@@ -799,7 +800,14 @@ export default function Today({ user, onSignOut }) {
   // Sub-screens (Detail / Library / Settings) render as SlideScreen overlays at
   // the END of the main return so they slide in/out over the home (see below).
 
-  if (loading) return <Loader />;
+  // Initial data load shows the Origin mark — identical to the boot splash
+  // (centered, full opacity) so launch → splash → data-load → home is one
+  // continuous ring mark with no size jump or blink.
+  if (loading) return (
+    <View style={{ flex: 1, backgroundColor: theme.surface.canvas, alignItems: 'center', justifyContent: 'center' }}>
+      <OriginGlyph size={200} />
+    </View>
+  );
 
   // ── Build cards: interleave pinned-time cards into the cascade by clock time ──
   const slotDefsWithSupps = slotDefs.filter((sd) => getSuppsForSlot(sd.id).length > 0);
