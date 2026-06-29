@@ -18,7 +18,7 @@ export default function OriginGlyph({ size = 56 }) {
       {RINGS.map(({ r, strokeWidth, opacity }) => (
         <Circle key={r} cx={512} cy={512} r={r} fill="none" stroke={theme.text.primary} strokeWidth={strokeWidth} opacity={opacity} />
       ))}
-      <Circle cx={512} cy={512} r={26} fill={theme.text.primary} />
+      <Circle cx={512} cy={512} r={26} fill={theme.status.success} />
     </Svg>
   );
 }
