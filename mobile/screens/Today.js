@@ -39,6 +39,8 @@ import {
   isPausedSupp,
   withPauseStarted,
   withPauseEnded,
+  scheduleOn,
+  withScheduleChange,
 } from 'shared/lib/time';
 import { DEFAULT_CONFIG, deriveOffsets, getSlotLabelForMode, makeCheckKey, computeAdaptiveDelta } from 'shared/config';
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
@@ -378,8 +380,10 @@ export default function Today({ user, onSignOut }) {
     });
   };
 
-  const inDay = (s) => !Array.isArray(s.days) || s.days.includes(viewDay);
-  const getSuppsForSlot = (sid) => homeSupps.filter((s) => Array.isArray(s.slots) && s.slots.includes(sid) && inDay(s));
+  // Resolve each supp's slots/days AS OF the viewed day (slot_history) so a
+  // schedule edit applies going forward and never rewrites past days.
+  const inDay = (s) => { const d = scheduleOn(s, viewDate).days; return !Array.isArray(d) || d.includes(viewDay); };
+  const getSuppsForSlot = (sid) => homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return Array.isArray(sl) && sl.includes(sid) && inDay(s); });
 
   const mealCount = scheduleConfig.meal_count ?? 3;
   const slotDefs =
@@ -417,12 +421,12 @@ export default function Today({ user, onSignOut }) {
     showToast(next ? 'reminders on' : 'reminders off', { tone: 'success' });
   };
 
-  const anytimeSupps = homeSupps.filter((s) => (!Array.isArray(s.slots) || s.slots.length === 0) && inDay(s));
+  const anytimeSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return (!Array.isArray(sl) || sl.length === 0) && inDay(s); });
   const pinnedSupps = anytimeSupps.filter((s) => s.pinned_time);
   const untimedSupps = anytimeSupps.filter((s) => !s.pinned_time);
   // "Second dose": a supp in a timed slot AND with a pinned time — appears in its
   // slot AND gets a separate pinned card (checked in the 'anytime' namespace).
-  const slottedPinnedSupps = homeSupps.filter((s) => Array.isArray(s.slots) && s.slots.length > 0 && s.pinned_time && inDay(s));
+  const slottedPinnedSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return Array.isArray(sl) && sl.length > 0 && s.pinned_time && inDay(s); });
 
   let coreTotal = anytimeSupps.length + slottedPinnedSupps.length;
   let coreDone = 0;
@@ -522,7 +526,17 @@ export default function Today({ user, onSignOut }) {
     try {
       const t = token();
       if (editingId) {
-        const updated = { ...form, days: finalDays, category: cat, id: editingId, ...txFields, ...pinnedField };
+        // Version slots/days by date: if the schedule changed, append a dated
+        // entry to slot_history (seeding the prior config from creation) so past
+        // days keep the old schedule. Only touched when slots/days actually
+        // change — dose/notes edits don't write slot_history.
+        const oldSupp = supps.find((x) => x.id === editingId);
+        const norm = (a) => JSON.stringify([...(a || [])].sort());
+        const schedChanged = oldSupp && (norm(oldSupp.slots) !== norm(form.slots) || norm(oldSupp.days) !== norm(finalDays));
+        const histField = schedChanged
+          ? { slot_history: withScheduleChange(oldSupp, form.slots, finalDays, dateKey(TODAY), oldSupp.created_at ? dateKey(new Date(oldSupp.created_at)) : '1970-01-01') }
+          : {};
+        const updated = { ...form, days: finalDays, category: cat, id: editingId, ...txFields, ...pinnedField, ...histField };
         await dbUpdateSupp(updated, t);
         setSupps((s) => s.map((x) => (x.id === editingId ? { ...x, ...updated } : x)));
       } else {

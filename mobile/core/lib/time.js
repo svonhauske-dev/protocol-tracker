@@ -77,6 +77,44 @@ export function isSupplementActiveOn(supp, date) {
   return true;
 }
 
+// ── Effective-dated schedule (slots/days) ────────────────────────────────────
+// Like pause_intervals, `slot_history` records dated config versions
+// [{ from: 'YYYY-MM-DD', slots, days }] so editing a supp's slots/days applies
+// GOING FORWARD and never rewrites past days. Empty history → falls back to the
+// supp's current slots/days (back-compat for every existing supplement).
+export function scheduleOn(supp, date) {
+  const cur = { slots: supp.slots || [], days: supp.days || [] };
+  const hist = Array.isArray(supp.slot_history) ? supp.slot_history : [];
+  if (hist.length === 0) return cur;
+  const dk = dateKey(startOfDay(date));
+  let chosen = null, earliest = null;
+  for (const h of hist) {
+    if (!h || !h.from) continue;
+    if (!earliest || h.from < earliest.from) earliest = h;
+    if (h.from <= dk && (!chosen || h.from > chosen.from)) chosen = h;
+  }
+  const pick = chosen || earliest;
+  if (!pick) return cur;
+  return {
+    slots: Array.isArray(pick.slots) ? pick.slots : cur.slots,
+    days: Array.isArray(pick.days) ? pick.days : cur.days,
+  };
+}
+
+// Append a dated schedule version when slots/days change. Seeds the PRIOR config
+// (effective from creation) the first time so past days resolve to the OLD
+// schedule, not the new one. `todayStr`/`createdStr` are YYYY-MM-DD keys.
+export function withScheduleChange(supp, newSlots, newDays, todayStr, createdStr) {
+  let hist = Array.isArray(supp.slot_history) ? [...supp.slot_history] : [];
+  if (hist.length === 0) {
+    hist.push({ from: createdStr || '1970-01-01', slots: supp.slots || [], days: supp.days || [] });
+  }
+  hist = hist.filter((h) => h && h.from !== todayStr);
+  hist.push({ from: todayStr, slots: newSlots || [], days: newDays || [] });
+  hist.sort((a, b) => (a.from < b.from ? -1 : 1));
+  return hist;
+}
+
 export function isActiveSupp(supp) {
   return supp.status === 'active' || (!supp.status && !supp.paused);
 }

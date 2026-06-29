@@ -1,4 +1,4 @@
-import { dateKey, startOfDay, isActiveSupp, isStoppedSupp, isSupplementActiveOn } from './time';
+import { dateKey, startOfDay, isActiveSupp, isStoppedSupp, isSupplementActiveOn, scheduleOn } from './time';
 import { makeCheckKey } from '../config';
 
 // One "expected check" per (slot, supp) pair, plus one for each anytime supp.
@@ -9,12 +9,13 @@ import { makeCheckKey } from '../config';
 // count toward the expected denominator. Needed because IF v2 migration left
 // some supplements with both legacy and IF v2 slot ids in their `slots` array;
 // without filtering, the denominator gets inflated by uncheckable legacy slots.
-function countExpectedChecks(supp, dk, checked, activeSlotIds) {
-  if (!supp.slots || supp.slots.length === 0) {
+function countExpectedChecks(supp, dk, checked, activeSlotIds, slots) {
+  const useSlots = slots || supp.slots;
+  if (!useSlots || useSlots.length === 0) {
     return { total: 1, done: checked[makeCheckKey(dk, 'anytime', supp.id)] ? 1 : 0 };
   }
   let total = 0, done = 0;
-  for (const sid of supp.slots) {
+  for (const sid of useSlots) {
     if (activeSlotIds && !activeSlotIds.has(sid)) continue;
     total++;
     if (checked[makeCheckKey(dk, sid, supp.id)]) done++;
@@ -28,13 +29,14 @@ export function calculateAdherenceForDate(date, supplements, log, activeSlotIds 
   const dayOfWeek = date.getDay();
   const checked = log.checked || {};
 
-  const activeSupps = supplements.filter(s =>
-    !isStoppedSupp(s) && isSupplementActiveOn(s, date) && s.days.includes(dayOfWeek)
-  );
-
+  // Resolve each supp schedule AS OF this date (slot_history) so past days
+  // reflect the schedule in effect then, not the current one.
   let total = 0, done = 0;
-  for (const supp of activeSupps) {
-    const r = countExpectedChecks(supp, dk, checked, activeSlotIds);
+  for (const supp of supplements) {
+    if (isStoppedSupp(supp) || !isSupplementActiveOn(supp, date)) continue;
+    const sch = scheduleOn(supp, date);
+    if (!(sch.days || []).includes(dayOfWeek)) continue;
+    const r = countExpectedChecks(supp, dk, checked, activeSlotIds, sch.slots);
     total += r.total;
     done  += r.done;
   }
