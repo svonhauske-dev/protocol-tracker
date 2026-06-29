@@ -4,38 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
-import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox, Cursor } from '../components';
+import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox, Cursor, ConfigRow } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import ScheduleTab from './ScheduleTab';
 import SlideScreen from '../components/SlideScreen';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
-
-// Config-listing row — the terminal/config-file structure: `ix  key ····· value →`.
-// Numbered + leader-dotted + monochrome (white key, dim everything else).
-function ConfigRow({ ix, label, value, valueNode, onPress }) {
-  const interactive = !!onPress;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={!interactive}
-      accessibilityRole={interactive ? 'button' : undefined}
-      accessibilityLabel={label}
-      style={{ flexDirection: 'row', alignItems: 'center', minHeight: touch.min, paddingLeft: spacing.md }}
-    >
-      <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, fontVariant: ['tabular-nums'], marginRight: spacing.sm }}>{ix}</Text>
-      <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary }}>{label}</Text>
-      <View style={{ flex: 1, height: 0, borderBottomWidth: 1, borderStyle: 'dotted', borderBottomColor: theme.border.subtle, marginHorizontal: spacing.sm }} />
-      {valueNode ? valueNode : (
-        <>
-          {value ? <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary, letterSpacing: 0.5, textTransform: 'uppercase', maxWidth: 150 }}>{value}</Text> : null}
-          {interactive ? <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary, marginLeft: spacing.xs }}>→</Text> : null}
-        </>
-      )}
-    </Pressable>
-  );
-}
 
 // Public privacy-policy URL — required in-app and in App Store Connect by
 // Guideline 5.1.1(i).
@@ -233,25 +208,29 @@ export default function SettingsScreen({
           {header(TITLES.account, () => setView('main'))}
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView {...scrollProps}>
-            <View style={{ marginBottom: spacing.xl }}>
-              <Label>Full name</Label>
-              <View>
-                <Input value={displayName} onChangeText={handleDisplayNameChange} placeholder="e.g. Sofia von Hauske" autoComplete="name" autoCapitalize="words" />
-                {nameSaving ? (
-                  <View style={{ position: 'absolute', right: spacing.sm, top: 0, bottom: 0, justifyContent: 'center' }}>
-                    <InlineLoader size="sm" />
-                  </View>
-                ) : null}
-              </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+              <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
+              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --account</Text>
+              <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
             </View>
 
-            <View style={{ marginBottom: spacing.xl }}>
-              <Label>Email</Label>
+            <SectionHeader>name</SectionHeader>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Input value={displayName} onChangeText={handleDisplayNameChange} placeholder="e.g. Sofia von Hauske" autoComplete="name" autoCapitalize="words" />
+              {nameSaving ? (
+                <View style={{ position: 'absolute', right: spacing.sm, top: 0, bottom: 0, justifyContent: 'center' }}>
+                  <InlineLoader size="sm" />
+                </View>
+              ) : null}
+            </View>
+
+            <SectionHeader>email</SectionHeader>
+            <View style={{ marginBottom: spacing.lg }}>
               <Text tone="secondary" size="caption" style={{ marginBottom: spacing.xs }}>{user.email}</Text>
               <Input
                 value={newEmail}
                 onChangeText={(v) => { setNewEmail(v); setEmailMsg(''); }}
-                placeholder="New email address"
+                placeholder="new email address"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -259,27 +238,26 @@ export default function SettingsScreen({
               />
               {emailMsg ? <Text size="label" tone="danger" style={{ marginBottom: spacing.xs }}>{emailMsg}</Text> : null}
               <Button variant="secondary" fullWidth disabled={emailSaving || !newEmail.trim()} onPress={handleSaveEmail}>
-                {emailSaving ? <InlineLoader size="sm" /> : 'Update email'}
+                {emailSaving ? <InlineLoader size="sm" /> : 'update email'}
               </Button>
             </View>
 
-            <View>
-              <Label>Password</Label>
-              <Input value={newPassword} onChangeText={setNewPassword} placeholder="New password" secureTextEntry autoCapitalize="none" style={{ marginBottom: spacing.xs }} />
-              <Input value={confirmPw} onChangeText={setConfirmPw} placeholder="Confirm new password" secureTextEntry autoCapitalize="none" style={{ marginBottom: spacing.xs }} />
-              {confirmPw && !pwMatch ? <Text size="label" tone="danger" style={{ marginBottom: spacing.xs }}>Passwords don't match</Text> : null}
+            <SectionHeader>password</SectionHeader>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Input value={newPassword} onChangeText={setNewPassword} placeholder="new password" secureTextEntry autoCapitalize="none" style={{ marginBottom: spacing.xs }} />
+              <Input value={confirmPw} onChangeText={setConfirmPw} placeholder="confirm new password" secureTextEntry autoCapitalize="none" style={{ marginBottom: spacing.xs }} />
+              {confirmPw && !pwMatch ? <Text size="label" tone="danger" style={{ marginBottom: spacing.xs }}>passwords don't match</Text> : null}
               <View style={{ marginBottom: spacing.xs }}>
                 {PASSWORD_RULES.map((r) => <PasswordRule key={r.label} label={r.label} met={r.test(newPassword)} />)}
               </View>
               <Button variant="secondary" fullWidth disabled={pwSaving || !pwRulesOk || !pwMatch} onPress={handleSavePassword}>
-                {pwSaving ? <InlineLoader size="sm" /> : 'Update password'}
+                {pwSaving ? <InlineLoader size="sm" /> : 'update password'}
               </Button>
             </View>
 
-            <Divider />
-            <Label>Danger zone</Label>
-            <Button variant="destructive" fullWidth onPress={() => { setDeleteErr(''); setShowDeleteConfirm(true); }}>Delete account</Button>
-            <Text tone="tertiary" size="label" style={{ marginTop: spacing.xs }}>Permanently deletes your account and all your data. This can't be undone.</Text>
+            <SectionHeader>danger</SectionHeader>
+            <Button variant="destructive" fullWidth onPress={() => { setDeleteErr(''); setShowDeleteConfirm(true); }}>delete account</Button>
+            <Text tone="tertiary" size="label" style={{ marginTop: spacing.xs }}>permanently deletes your account and all your data. this can't be undone.</Text>
           </ScrollView>
           </KeyboardAvoidingView>
         </View>

@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseHHMM, fmtTime, addMins } from 'shared/lib/time';
 import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets, computeIFSlotTimes } from 'shared/config';
 import { IF_SLOTS, SLOTS } from 'shared/lib/notifications';
-import { Heading, Label, SectionHeader, HelperText, Text, Button, Card, Stepper } from '../components';
+import { Heading, Label, SectionHeader, HelperText, Text, Button, Card, Stepper, OptionRow } from '../components';
 import PickerField from '../components/PickerField';
 import Modal from '../components/Modal';
 import { theme, spacing, typography, touch, layout, fonts } from '../theme';
@@ -299,24 +299,20 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       <View style={{ marginBottom: spacing.lg }}>
         <SectionHeader>Schedule type</SectionHeader>
         {localMode === 'none' ? <HelperText>add items without a time slot to use a simple checklist</HelperText> : null}
-        <View style={{ gap: spacing.md }}>
-          {[0, 2].map((start) => (
-            <View key={start} style={{ flexDirection: 'row', gap: spacing.md }}>
-              {DISPLAY_MODES.slice(start, start + 2).map((m) => (
-                <View key={m.id} style={{ flex: 1 }}>
-                  <ModeCard
-                    active={selectedCard === m.id}
-                    title={m.title}
-                    desc={m.desc}
-                    onPress={() => {
-                      setSelectedCard(m.id);
-                      if (m.id === 'anchor') { if (localMode !== 'medication' && localMode !== 'wakeup') handleModeChange('medication'); }
-                      else handleModeChange(m.id);
-                    }}
-                  />
-                </View>
-              ))}
-            </View>
+        <View>
+          {DISPLAY_MODES.map((m, i) => (
+            <OptionRow
+              key={m.id}
+              ix={String(i + 1).padStart(2, '0')}
+              title={m.title}
+              desc={m.desc}
+              active={selectedCard === m.id}
+              onPress={() => {
+                setSelectedCard(m.id);
+                if (m.id === 'anchor') { if (localMode !== 'medication' && localMode !== 'wakeup') handleModeChange('medication'); }
+                else handleModeChange(m.id);
+              }}
+            />
           ))}
         </View>
 
@@ -470,9 +466,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             ) : (
               previewRows.map((row, i) => (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <Text size="caption" weight="semibold" style={{ color: theme.accent.default, minWidth: touch.min }}>{row.timeStr ?? fmtTime(addMins(previewBase, row.offset))}</Text>
-                  <Text tone="secondary" size="caption">—</Text>
-                  <Text tone="secondary" size="caption">{row.label}</Text>
+                  <Text style={{ fontFamily: fonts.grotesk.bold, fontSize: typography.title, color: theme.text.primary, fontVariant: ['tabular-nums'], minWidth: 72 }}>{row.timeStr ?? fmtTime(addMins(previewBase, row.offset))}</Text>
+                  <Text tone="secondary" size="caption" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>{row.label}</Text>
                 </View>
               ))
             )}

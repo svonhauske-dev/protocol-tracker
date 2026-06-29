@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import { shortDate } from 'shared/lib/time';
 import { dbGetReceivedProtocols } from 'shared/lib/api';
-import { Heading, Label, Text, Button, Input, Row, HelperText, InlineTip, Cursor } from '../components';
+import { Heading, Label, SectionHeader, Text, Button, Input, Row, HelperText, InlineTip, Cursor, ConfigRow, OptionRow } from '../components';
 import DateRangeField from '../components/DateRangeField';
 import Modal from '../components/Modal';
 import TabBar from '../components/TabBar';
@@ -171,31 +171,26 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+          <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --library</Text>
+          <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
+        </View>
+
         {received.length > 0 ? (
           <View style={{ marginBottom: spacing.xl }}>
-            <Label style={{ marginBottom: spacing.xs }}>Received</Label>
+            <SectionHeader>received</SectionHeader>
             <InlineTip id="first-received" label="what you can do">tap a protocol to add it on top of your current one, replace it, or save it for later.</InlineTip>
-            <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
-              {received.map((send) => (
-                <Row
-                  key={send.id}
-                  onPress={() => setActivateSend(send)}
-                  rightContent={<Text size="body" tone="tertiary">→</Text>}
-                  leftContent={
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Heading level={3} visual="title" font="heading" weight="semibold" numberOfLines={1}>{send.name}</Heading>
-                      <Text tone="secondary" size="caption">{(send.supplements_snapshot || []).length} supplements</Text>
-                    </View>
-                  }
-                  style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
-                />
+            <View style={{ marginTop: spacing.sm, borderLeftWidth: 2, borderLeftColor: theme.border.subtle }}>
+              {received.map((send, i) => (
+                <ConfigRow key={send.id} grotesk ix={String(i + 1).padStart(2, '0')} label={send.name} value={String((send.supplements_snapshot || []).length)} onPress={() => setActivateSend(send)} />
               ))}
             </View>
           </View>
         ) : null}
 
         <TabBar
-          tabs={[{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Saved' }]}
+          tabs={[{ value: 'active', label: 'active' }, { value: 'archived', label: 'saved' }]}
           active={tab}
           onChange={setTab}
           style={{ marginBottom: spacing.lg }}
@@ -205,18 +200,18 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
           activeProtocols.length === 0 ? (
             <EmptyState eyebrow="protocols — empty" line="build your first protocol" onNew={() => setShowNew(true)} />
           ) : (
-            <View style={{ borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.subtle }}>
-              {activeProtocols.map((p) => (
-                <ProtocolRow key={p.id} protocol={p} count={suppCount(p.id)} onTap={onOpenDetail ? () => onOpenDetail(p) : undefined} />
+            <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle }}>
+              {activeProtocols.map((p, i) => (
+                <ConfigRow key={p.id} grotesk ix={String(i + 1).padStart(2, '0')} label={p.name} value={String(suppCount(p.id))} onPress={onOpenDetail ? () => onOpenDetail(p) : undefined} />
               ))}
             </View>
           )
         ) : archivedProtocols.length === 0 ? (
           <EmptyState eyebrow="saved — empty" line="nothing saved yet" />
         ) : (
-          <View style={{ borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.subtle }}>
-            {archivedProtocols.map((p) => (
-              <ProtocolRow key={p.id} protocol={p} count={suppCount(p.id)} onTap={onOpenDetail ? () => onOpenDetail(p) : undefined} />
+          <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle }}>
+            {archivedProtocols.map((p, i) => (
+              <ConfigRow key={p.id} grotesk dim ix={String(i + 1).padStart(2, '0')} label={p.name} value={String(suppCount(p.id))} onPress={onOpenDetail ? () => onOpenDetail(p) : undefined} />
             ))}
           </View>
         )}
@@ -289,9 +284,9 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
           </View>
         ) : (
           <View>
-            <IntentOption label="replace current" description={`${replacedNames} will be archived · ${newName.trim()} becomes your active protocol`} onPress={() => handleCreate('replace')} />
-            <IntentOption label="stack on top" description="supplements from all active protocols appear on your home screen simultaneously" onPress={() => handleCreate('stack')} />
-            <IntentOption label="save for later" description="added to your library without activating. enable it whenever you're ready" onPress={() => handleCreate('save_later')} />
+            <OptionRow ix="01" title="replace current" desc={`${replacedNames} will be archived · ${newName.trim()} becomes your active protocol`} onPress={() => handleCreate('replace')} />
+            <OptionRow ix="02" title="stack on top" desc="supplements from all active protocols appear on your home screen simultaneously" onPress={() => handleCreate('stack')} />
+            <OptionRow ix="03" title="save for later" desc="added to your library without activating. enable it whenever you're ready" onPress={() => handleCreate('save_later')} />
           </View>
         )}
       </Modal>
@@ -305,9 +300,9 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
         <Text tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 21 }}>
           {(activateSend?.supplements_snapshot || []).length} supplement{(activateSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} included.
         </Text>
-        <IntentOption label="add on top" description="appears alongside your current protocols on the home screen" onPress={() => handleReceived('stack')} />
-        <IntentOption label="replace current" description="archives your active protocols and makes this the active one" onPress={() => handleReceived('replace')} />
-        <IntentOption label="save for later" description="added to your saved tab without activating" onPress={() => handleReceived('save_later')} />
+        <OptionRow ix="01" title="add on top" desc="appears alongside your current protocols on the home screen" onPress={() => handleReceived('stack')} />
+        <OptionRow ix="02" title="replace current" desc="archives your active protocols and makes this the active one" onPress={() => handleReceived('replace')} />
+        <OptionRow ix="03" title="save for later" desc="added to your saved tab without activating" onPress={() => handleReceived('save_later')} />
         <View style={{ marginTop: spacing.sm }}>
           <Button variant="destructive" fullWidth disabled={busy} onPress={handleDecline}>decline</Button>
         </View>

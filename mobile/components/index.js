@@ -6,6 +6,8 @@ export { default as Cursor } from './Cursor';
 export { default as Meter } from './Meter';
 export { default as InlineTip } from './InlineTip';
 export { default as Stepper } from './Stepper';
+export { default as ConfigRow } from './ConfigRow';
+export { default as OptionRow } from './OptionRow';
 export { default as HelperText } from './HelperText';
 export { default as Text } from './Text';
 export { default as Button } from './Button';
