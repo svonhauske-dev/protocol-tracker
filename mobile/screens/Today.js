@@ -89,10 +89,9 @@ const sliceForDay = (checked, dk) => {
   return out;
 };
 
-// Avatar = a sharp 1px mono box with the initial + the "origin center point"
-// mark bottom-right. Square, not a round disc — it obeys the app's own zero-
-// radius rule instead of the default Gmail/Slack circle-chip, and matches the
-// square icon-buttons sitting beside it.
+// Avatar = a sharp 1px mono box with the initial. Square, not a round disc —
+// it obeys the app's own zero-radius rule instead of the default Gmail/Slack
+// circle-chip, and matches the square icon-buttons sitting beside it.
 function Avatar({ initial, onPress }) {
   return (
     <Pressable
@@ -102,8 +101,6 @@ function Avatar({ initial, onPress }) {
       style={{ width: touch.min, height: touch.min, borderWidth: 1, borderColor: theme.border.strong, alignItems: 'center', justifyContent: 'center' }}
     >
       <Text weight="medium" size="body">{initial}</Text>
-      {/* origin center point */}
-      <View style={{ position: 'absolute', right: -1, bottom: -1, width: 4, height: 4, borderRadius: 2, backgroundColor: theme.text.primary }} />
     </Pressable>
   );
 }
