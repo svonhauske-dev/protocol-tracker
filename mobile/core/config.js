@@ -27,9 +27,9 @@ export const FIXED_SLOTS = [
 ];
 
 export const ANCHOR_NOTES = {
-  medication: "Your anchor is when you take your medication each morning.",
-  fasting:    "Your anchor is when your eating window opens.",
-  wakeup:     "Your anchor is when you wake up each morning.",
+  medication: "your anchor is when you take your medication each morning",
+  fasting:    "your anchor is when your eating window opens",
+  wakeup:     "your anchor is when you wake up each morning",
 };
 
 export const toHrMin = (totalMins) => {
@@ -40,20 +40,20 @@ export const toHrMin = (totalMins) => {
 export const fromHrMin = (h, m) => (parseInt(h) || 0) * 60 + (parseInt(m) || 0);
 
 export const MODES = [
-  { id: "none",       title: "No Schedule",          desc: "Just a checklist — no times, no notifications" },
+  { id: "none",       title: "No Schedule",          desc: "just a checklist — no times, no notifications" },
   { id: "medication", title: "Medication Anchor",    desc: "Your day cascades from when you take your medication" },
   { id: "wakeup",     title: "Wake Up Anchor",       desc: "Your day cascades from when you wake up" },
-  { id: "fasting",    title: "Intermittent Fasting", desc: "Built around your eating window" },
-  { id: "fixed",      title: "Fixed Times",          desc: "Same schedule every day, no anchor" },
+  { id: "fasting",    title: "Intermittent Fasting", desc: "built around your eating window" },
+  { id: "fixed",      title: "Fixed Times",          desc: "same schedule every day, no anchor" },
 ];
 
 // 4-card UI grouping: medication + wakeup collapsed under "Anchor".
 // DB still stores 'medication' or 'wakeup' — this is presentation only.
 export const DISPLAY_MODES = [
-  { id: "none",    title: "No Schedule",          desc: "Just a checklist — no times, no notifications" },
-  { id: "anchor",  title: "Anchor",               desc: "Cascade from when you take your medication or wake up" },
-  { id: "fasting", title: "Intermittent Fasting", desc: "Built around your eating window" },
-  { id: "fixed",   title: "Fixed Times",          desc: "Same schedule every day, no anchor" },
+  { id: "none",    title: "No Schedule",          desc: "just a checklist — no times, no notifications" },
+  { id: "anchor",  title: "Anchor",               desc: "cascade from when you take your medication or wake up" },
+  { id: "fasting", title: "Intermittent Fasting", desc: "built around your eating window" },
+  { id: "fixed",   title: "Fixed Times",          desc: "same schedule every day, no anchor" },
 ];
 
 export const ANCHOR_SUB_MODES = [
