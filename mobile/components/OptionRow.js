@@ -27,7 +27,7 @@ export default function OptionRow({ ix, title, desc, active = false, onPress, ri
       {ix ? <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption, color: active ? theme.text.primary : theme.text.tertiary, fontVariant: ['tabular-nums'], paddingTop: 3 }}>{ix}</Text> : null}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Heading level={3} visual="title" font="heading" weight="semibold">{title}</Heading>
-        {desc ? <Text tone="secondary" size="caption" style={{ marginTop: 3, lineHeight: 18 }}>{desc}</Text> : null}
+        {desc ? <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption, color: theme.text.secondary, marginTop: 3, lineHeight: 18 }}>{desc}</Text> : null}
       </View>
       {right ? <View style={{ alignSelf: 'center' }}>{right}</View> : null}
     </Pressable>
