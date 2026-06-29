@@ -10,7 +10,12 @@ import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import ScheduleTab from './ScheduleTab';
 import SlideScreen from '../components/SlideScreen';
+import OriginGlyph from '../components/OriginGlyph';
+import Constants from 'expo-constants';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
+
+const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
+const BUILD_NUMBER = Constants.expoConfig?.ios?.buildNumber || '';
 
 // Public privacy-policy URL — required in-app and in App Store Connect by
 // Guideline 5.1.1(i).
@@ -194,6 +199,13 @@ export default function SettingsScreen({
         </View>
 
         <Button variant="secondary" fullWidth style={{ marginTop: spacing.sm }} onPress={() => setShowSignOutConfirm(true)}>$ sign out</Button>
+
+        {/* about footer — the one place the brand names itself in the logged-in app */}
+        <View style={{ alignItems: 'center', marginTop: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md }}>
+          <OriginGlyph size={24} />
+          <Text style={{ fontFamily: fonts.grotesk.semibold, fontSize: typography.body, color: theme.text.tertiary, letterSpacing: 0.5, marginTop: spacing.sm }}>origin</Text>
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginTop: spacing.xs }}>{`v${APP_VERSION}${BUILD_NUMBER ? ` (${BUILD_NUMBER})` : ''}`}</Text>
+        </View>
       </ScrollView>
 
       {/* Account — slides in from the right */}
