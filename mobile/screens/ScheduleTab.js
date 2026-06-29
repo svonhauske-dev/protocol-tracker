@@ -318,7 +318,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
 
         {selectedCard === 'anchor' ? (
           <View style={{ marginTop: spacing.sm }}>
-            <Label>Anchor type</Label>
+            <SectionHeader>Anchor type</SectionHeader>
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               {ANCHOR_SUB_MODES.map((sub) => (
                 <Button key={sub.id} variant="selector" active={localMode === sub.id} style={{ flex: 1 }} onPress={() => handleModeChange(sub.id)}>{sub.label}</Button>
