@@ -1,17 +1,18 @@
 // Babel config for the Origin mobile (Expo) app.
 //
-// The `module-resolver` alias maps `shared` → the in-project `shared` symlink
-// (→ ../src), so the mobile app imports the web app's shared pure-JS logic with
-// clean specifiers (`import { CORE_SLOTS } from 'shared/config'`). The web app
-// is never edited; we only read from ../src.
+// The `module-resolver` alias maps `shared` → `mobile/core`, the mobile-OWNED
+// fork of the formerly-shared web logic (config / api / time / notifications /
+// adherence / supplements-database). Imports keep the `shared/...` specifier
+// (`import { CORE_SLOTS } from 'shared/config'`) but now resolve inside mobile,
+// so the app builds + ships independently of the web app (`../src`), which is
+// being sunset. Forked June 29, 2026; web was NOT modified.
 
 const path = require('path');
 
-// The shared web api.js (../src/lib/api.js) uses Vite's `import.meta.env.DEV`
-// inside its dev-only logger. RN/Hermes has no `import.meta.env`, so calling
-// those auth functions would throw "Cannot read properties of undefined". This
-// tiny transform rewrites every `import.meta` to an object exposing `.env.DEV`
-// (mapped to RN's `__DEV__`), so the shared file runs UNCHANGED.
+// Safety net: mobile's own core/lib/api.js now uses `__DEV__` directly (the fork
+// dropped the Vite `import.meta.env.DEV` web-ism), but this transform stays as a
+// defensive no-op — any stray `import.meta` (e.g. from a dependency) is rewritten
+// to an object exposing `.env.DEV` (mapped to RN's `__DEV__`) so Hermes won't choke.
 function inlineImportMetaEnv() {
   return {
     name: 'inline-import-meta-env',
@@ -46,9 +47,9 @@ module.exports = function (api) {
         'module-resolver',
         {
           alias: {
-            // In-project symlink (→ ../src). Absolute path so resolution is
-            // unambiguous regardless of which file does the importing.
-            shared: path.resolve(__dirname, 'shared'),
+            // Mobile-owned fork (was a symlink → ../src). Absolute path so
+            // resolution is unambiguous regardless of which file imports it.
+            shared: path.resolve(__dirname, 'core'),
           },
         },
       ],
