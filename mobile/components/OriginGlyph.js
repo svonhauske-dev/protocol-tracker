@@ -6,9 +6,9 @@ import { theme } from '../theme';
 // support is inconsistent); the solid dot reads the same at this size.
 const RINGS = [
   { r: 439, strokeWidth: 4.1, opacity: 0.25 },
-  { r: 347, strokeWidth: 4.5, opacity: 0.4 },
-  { r: 256, strokeWidth: 5.7, opacity: 0.6 },
-  { r: 165, strokeWidth: 7.0, opacity: 0.85 },
+  { r: 347, strokeWidth: 4.4, opacity: 0.4 },
+  { r: 256, strokeWidth: 5.2, opacity: 0.6 },
+  { r: 165, strokeWidth: 6.4, opacity: 0.85 },
   { r: 91, strokeWidth: 8.2, opacity: 1.0 },
 ];
 
