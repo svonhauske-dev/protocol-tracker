@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Origin — non-home screens, structural pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0d0d0d; --card:#141414; --ink:#f4f4f2; --muted:#8a8a86; --dim:#5a5a57;
+    --line:#262626; --line-bright:#3a3a3a; --accent:#5fe090;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,monospace; --grotesk:'Space Grotesk',var(--mono);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{background:#000;min-height:100vh;display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start;justify-content:center;padding:48px 24px;font-family:var(--mono);}
+  .label{font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);}
+  .label .mk{color:var(--muted);}
+  .device{width:390px;background:var(--bg);border-radius:0;border:1px solid var(--line-bright);overflow:hidden;}
+  .cap{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;text-align:center;margin-bottom:12px;}
+  .statusbar{height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 8px;font-family:-apple-system,system-ui;font-size:15px;font-weight:600;color:var(--ink);}
+  .hdr{display:flex;align-items:center;gap:14px;padding:8px 20px 18px;border-bottom:1px solid var(--line);}
+  .hdr .back{width:38px;height:38px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-size:18px;}
+  .hdr .t{font-family:var(--grotesk);font-size:17px;font-weight:600;color:var(--ink);}
+  .cursor{display:inline-block;width:8px;height:15px;background:var(--accent);vertical-align:-2px;margin-left:4px;animation:blink 1.06s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .body{padding:20px 22px 28px;}
+
+  /* prompt line that heads each screen */
+  .prompt{font-size:14px;color:var(--muted);margin-bottom:26px;}
+  .prompt b{color:var(--ink);font-weight:500;}
+
+  /* section header */
+  .sec{display:flex;align-items:center;gap:10px;margin:0 0 6px;}
+  .sec .label{flex:0 0 auto;} .sec .rule{flex:1;height:1px;background:var(--line);}
+
+  /* ── CONFIG LISTING (settings) ── numbered, leader-dotted, gutter rail ── */
+  .list{border-left:2px solid var(--line-bright);margin:14px 0 30px;}
+  .row{display:flex;align-items:baseline;gap:10px;padding:13px 0 13px 16px;}
+  .row .ix{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;flex:0 0 auto;}
+  .row .k{font-size:15px;color:var(--ink);flex:0 0 auto;}
+  .row .dots{flex:1;border-bottom:1px dotted var(--line-bright);transform:translateY(-4px);min-width:18px;}
+  .row .v{font-size:13px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;flex:0 0 auto;}
+  .row .arrow{color:var(--dim);flex:0 0 auto;font-size:14px;}
+  /* inline segmented value */
+  .seg{display:inline-flex;}
+  .seg span{font-size:12px;padding:3px 10px;border:1px solid var(--line);color:var(--dim);}
+  .seg span.on{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600;}
+  .seg span + span{margin-left:-1px;}
+
+  /* ── identity block (dominant top of settings) ── */
+  .id{display:flex;align-items:center;gap:14px;padding-bottom:22px;margin-bottom:8px;border-bottom:1px solid var(--line);}
+  .id .av{width:46px;height:46px;border:1px solid var(--line-bright);display:grid;place-items:center;font-size:16px;color:var(--ink);}
+  .id .nm{font-family:var(--grotesk);font-size:20px;font-weight:600;color:var(--ink);}
+  .id .em{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.5px;}
+
+  /* ── numbered option selector (schedule) ── */
+  .opt{display:flex;align-items:flex-start;gap:14px;padding:15px 16px;border-left:2px solid var(--line);margin-bottom:4px;cursor:pointer;}
+  .opt.on{border-left-color:var(--accent);background:rgba(95,224,144,.05);}
+  .opt .ix{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums;padding-top:2px;}
+  .opt.on .ix{color:var(--accent);}
+  .opt .ttl{font-family:var(--grotesk);font-size:17px;font-weight:600;color:var(--ink);}
+  .opt .ds{font-size:12px;color:var(--dim);margin-top:4px;letter-spacing:.3px;}
+  .opt .mk{margin-left:auto;color:var(--accent);font-size:13px;align-self:center;}
+
+  /* ── schedule preview as the dominant readout block ── */
+  .preview{border:1px solid var(--line);background:var(--card);padding:16px;margin-top:8px;}
+  .preview .ph{font-size:11px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:14px;}
+  .pr{display:flex;align-items:baseline;gap:12px;padding:7px 0;}
+  .pr .pt{font-family:var(--grotesk);font-size:20px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.5px;width:84px;}
+  .pr .pl{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .pr.next .pt{color:var(--accent);}
+
+  .ghost{margin-top:30px;border:1px solid var(--line-bright);text-align:center;padding:15px;font-size:14px;color:var(--ink);letter-spacing:.5px;}
+</style>
+</head>
+<body>
+
+  <!-- ════════ SETTINGS — config listing ════════ -->
+  <div>
+  <div class="cap">settings — config listing</div>
+  <div class="device">
+    <div class="statusbar"><span>9:41</span><span>● ● ●</span></div>
+    <div class="hdr"><div class="back">←</div><div class="t">Settings</div></div>
+    <div class="body">
+
+      <!-- dominant identity block -->
+      <div class="id">
+        <div class="av">S</div>
+        <div><div class="nm">sofia</div><div class="em">sofiavonhauske@gmail.com</div></div>
+      </div>
+
+      <div class="prompt"><b>$ origin</b> --config<span class="cursor"></span></div>
+
+      <div class="sec"><div class="label"><span class="mk">//</span> protocol</div><div class="rule"></div></div>
+      <div class="list">
+        <div class="row"><span class="ix">01</span><span class="k">schedule</span><span class="dots"></span><span class="v">medication</span><span class="arrow">→</span></div>
+        <div class="row"><span class="ix">02</span><span class="k">account</span><span class="dots"></span><span class="v">sofia@…</span><span class="arrow">→</span></div>
+      </div>
+
+      <div class="sec"><div class="label"><span class="mk">//</span> system</div><div class="rule"></div></div>
+      <div class="list">
+        <div class="row"><span class="ix">03</span><span class="k">reminders</span><span class="dots"></span><span class="seg"><span class="on">on</span><span>off</span></span></div>
+        <div class="row"><span class="ix">04</span><span class="k">privacy</span><span class="dots"></span><span class="arrow">→</span></div>
+      </div>
+
+      <div class="ghost">$ sign out</div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ════════ SCHEDULE — numbered selector + preview readout ════════ -->
+  <div>
+  <div class="cap">schedule — numbered + preview-as-hero</div>
+  <div class="device">
+    <div class="statusbar"><span>9:41</span><span>● ● ●</span></div>
+    <div class="hdr"><div class="back">←</div><div class="t">Schedule</div></div>
+    <div class="body">
+
+      <div class="prompt"><b>$ schedule</b> --type<span class="cursor"></span></div>
+
+      <div class="sec"><div class="label"><span class="mk">//</span> schedule type</div><div class="rule"></div></div>
+      <div style="margin:14px 0 26px;">
+        <div class="opt"><span class="ix">01</span><div><div class="ttl">no schedule</div><div class="ds">just a checklist — no times</div></div></div>
+        <div class="opt on"><span class="ix">02</span><div><div class="ttl">anchor</div><div class="ds">cascade from when you take your meds</div></div><span class="mk">◀ active</span></div>
+        <div class="opt"><span class="ix">03</span><div><div class="ttl">intermittent fasting</div><div class="ds">built around your eating window</div></div></div>
+        <div class="opt"><span class="ix">04</span><div><div class="ttl">fixed times</div><div class="ds">same schedule every day</div></div></div>
+      </div>
+
+      <div class="sec"><div class="label"><span class="mk">//</span> anchor · medication</div><div class="rule"></div></div>
+      <!-- the schedule PREVIEW promoted to the dominant block of the screen -->
+      <div class="preview">
+        <div class="ph">› preview — 07:00 anchor</div>
+        <div class="pr"><span class="pt">07:00</span><span class="pl">anchor</span></div>
+        <div class="pr"><span class="pt">07:30</span><span class="pl">before breakfast</span></div>
+        <div class="pr"><span class="pt">08:00</span><span class="pl">breakfast</span></div>
+        <div class="pr next"><span class="pt">12:00</span><span class="pl">lunch · next</span></div>
+        <div class="pr"><span class="pt">18:00</span><span class="pl">dinner</span></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</body>
+</html>

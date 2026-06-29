@@ -4,13 +4,38 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
-import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox } from '../components';
+import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox, Cursor } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import ScheduleTab from './ScheduleTab';
 import SlideScreen from '../components/SlideScreen';
-import { theme, spacing, typography, touch, icon } from '../theme';
+import { theme, spacing, typography, touch, icon, fonts } from '../theme';
+
+// Config-listing row — the terminal/config-file structure: `ix  key ····· value →`.
+// Numbered + leader-dotted + monochrome (white key, dim everything else).
+function ConfigRow({ ix, label, value, valueNode, onPress }) {
+  const interactive = !!onPress;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!interactive}
+      accessibilityRole={interactive ? 'button' : undefined}
+      accessibilityLabel={label}
+      style={{ flexDirection: 'row', alignItems: 'center', minHeight: touch.min, paddingLeft: spacing.md }}
+    >
+      <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, fontVariant: ['tabular-nums'], marginRight: spacing.sm }}>{ix}</Text>
+      <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary }}>{label}</Text>
+      <View style={{ flex: 1, height: 0, borderBottomWidth: 1, borderStyle: 'dotted', borderBottomColor: theme.border.subtle, marginHorizontal: spacing.sm }} />
+      {valueNode ? valueNode : (
+        <>
+          {value ? <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary, letterSpacing: 0.5, textTransform: 'uppercase', maxWidth: 150 }}>{value}</Text> : null}
+          {interactive ? <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary, marginLeft: spacing.xs }}>→</Text> : null}
+        </>
+      )}
+    </Pressable>
+  );
+}
 
 // Public privacy-policy URL — required in-app and in App Store Connect by
 // Guideline 5.1.1(i).
@@ -158,43 +183,48 @@ export default function SettingsScreen({
       {/* Main layer — always mounted; sub-pages slide in over it (iOS push feel) */}
       {header(TITLES.main, onBack)}
       <ScrollView {...scrollProps}>
-        <SectionHeader>Schedule</SectionHeader>
-        <Row
-          onPress={() => setView('schedule')}
-          leftContent={<Text tone="secondary">Edit schedule</Text>}
-          rightContent={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text size="label" tone="tertiary">{SCHED_LABEL[scheduleMode] || ''}</Text>
-              <Text size="body" tone="tertiary">→</Text>
-            </View>
-          }
-        />
-
-        <SectionHeader style={{ marginTop: spacing.lg }}>Account</SectionHeader>
-        <Row
-          onPress={() => setView('account')}
-          leftContent={<Text tone="secondary">Edit account</Text>}
-          rightContent={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text size="label" tone="tertiary" numberOfLines={1} style={{ maxWidth: 150 }}>{user.email}</Text>
-              <Text size="body" tone="tertiary">→</Text>
-            </View>
-          }
-        />
-
-        <SectionHeader style={{ marginTop: spacing.lg }}>Notifications</SectionHeader>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touch.min }}>
-          <Text tone="secondary">Daily reminders</Text>
-          <View style={{ flexDirection: 'row' }}>
-            <Button variant="selector" active={remindersEnabled} onPress={() => { if (!remindersEnabled) onToggleReminders?.(true); }} style={{ minWidth: 54 }}>On</Button>
-            <Button variant="selector" active={!remindersEnabled} onPress={() => { if (remindersEnabled) onToggleReminders?.(false); }} style={{ minWidth: 54, marginLeft: -1 }}>Off</Button>
+        {/* Identity block — the dominant top, gives the screen a hero */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.lg, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle, marginBottom: spacing.md }}>
+          <View style={{ width: 46, height: 46, borderWidth: 1, borderColor: theme.border.strong, alignItems: 'center', justifyContent: 'center' }}>
+            <Text weight="medium" size="body">{(profile?.display_name?.trim()[0] || user.email?.[0] || 'O').toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Heading level={2} visual="title" font="heading" weight="semibold" numberOfLines={1} style={{ textTransform: 'lowercase' }}>
+              {(profile?.display_name?.trim().split(' ')[0] || user.email?.split('@')[0] || 'you').toLowerCase()}
+            </Heading>
+            <Text tone="tertiary" size="label" numberOfLines={1} style={{ marginTop: 2 }}>{user.email}</Text>
           </View>
         </View>
 
-        <SectionHeader style={{ marginTop: spacing.lg }}>About</SectionHeader>
-        <Row onPress={() => Linking.openURL(PRIVACY_URL)} leftContent={<Text tone="secondary">Privacy policy</Text>} rightContent={<Text size="body" tone="tertiary">→</Text>} />
+        {/* shell prompt heading the screen */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+          <Text style={{ fontFamily: fonts.mono.medium, fontSize: typography.body, color: theme.text.primary }}>$ origin</Text>
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}> --config</Text>
+          <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
+        </View>
 
-        <Button variant="secondary" fullWidth style={{ marginTop: spacing.xl }} onPress={() => setShowSignOutConfirm(true)}>Sign out</Button>
+        <SectionHeader>protocol</SectionHeader>
+        <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle, marginBottom: spacing.lg }}>
+          <ConfigRow ix="01" label="schedule" value={SCHED_LABEL[scheduleMode] || ''} onPress={() => setView('schedule')} />
+          <ConfigRow ix="02" label="account" value={user.email} onPress={() => setView('account')} />
+        </View>
+
+        <SectionHeader>system</SectionHeader>
+        <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle, marginBottom: spacing.lg }}>
+          <ConfigRow
+            ix="03"
+            label="reminders"
+            valueNode={
+              <View style={{ flexDirection: 'row' }}>
+                <Button variant="selector" active={remindersEnabled} onPress={() => { if (!remindersEnabled) onToggleReminders?.(true); }} style={{ minWidth: 48 }}>on</Button>
+                <Button variant="selector" active={!remindersEnabled} onPress={() => { if (remindersEnabled) onToggleReminders?.(false); }} style={{ minWidth: 48, marginLeft: -1 }}>off</Button>
+              </View>
+            }
+          />
+          <ConfigRow ix="04" label="privacy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+        </View>
+
+        <Button variant="secondary" fullWidth style={{ marginTop: spacing.sm }} onPress={() => setShowSignOutConfirm(true)}>$ sign out</Button>
       </ScrollView>
 
       {/* Account — slides in from the right */}
