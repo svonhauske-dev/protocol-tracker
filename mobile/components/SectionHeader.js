@@ -12,9 +12,12 @@ import { theme, typography, spacing, fonts } from '../theme';
 //
 // `marker` defaults to "//" (the section signature); pass marker={null} to drop it.
 // Wider tracking than Label (2pt vs 1pt) for the airy terminal feel.
-export default function SectionHeader({ children, marker = '//', style, ...rest }) {
+// `rule` (default true) draws the hairline beneath — full screen sections use it;
+// dense modal field-groups pass rule={false} to keep the // marker without a
+// heavy rule under every field.
+export default function SectionHeader({ children, marker = '//', rule = true, style, ...rest }) {
   return (
-    <View style={[{ marginBottom: spacing.md }, style]} {...rest}>
+    <View style={[{ marginBottom: rule ? spacing.md : spacing.xs }, style]} {...rest}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {marker ? (
           <Text
@@ -46,13 +49,15 @@ export default function SectionHeader({ children, marker = '//', style, ...rest 
           {children}
         </Text>
       </View>
-      <View
-        style={{
-          borderBottomWidth: theme.borderWidth.default,
-          borderBottomColor: theme.border.divider,
-          marginTop: spacing.xs,
-        }}
-      />
+      {rule ? (
+        <View
+          style={{
+            borderBottomWidth: theme.borderWidth.default,
+            borderBottomColor: theme.border.divider,
+            marginTop: spacing.xs,
+          }}
+        />
+      ) : null}
     </View>
   );
 }

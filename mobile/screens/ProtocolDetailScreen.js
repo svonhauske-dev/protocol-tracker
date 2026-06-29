@@ -3,7 +3,7 @@ import { View, ScrollView, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MoreHorizontal, Plus, Pause, Play, Trash2 } from 'lucide-react-native';
 import { isActiveSupp, isPausedSupp } from 'shared/lib/time';
-import { Heading, Text, Button, Badge, Input, Cursor } from '../components';
+import { Heading, Text, Button, Badge, Input, Cursor, SectionHeader } from '../components';
 import CategoryIcon from '../components/CategoryIcon';
 import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
@@ -257,9 +257,10 @@ export default function ProtocolDetailScreen({
           </Button>
         }
       >
-        <Text allowFontScaling maxFontSizeMultiplier={1.4} tone="secondary" style={{ marginBottom: spacing.sm, lineHeight: 21 }}>
-          {`Send "${protocol.name}" to another Origin user by email. They choose to add it on top, replace their current one, or save it.`}
+        <Text allowFontScaling maxFontSizeMultiplier={1.4} tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 21 }}>
+          {`send "${protocol.name}" to another origin user by email. they choose to add it on top, replace their current one, or save it.`}
         </Text>
+        <SectionHeader rule={false}>recipient</SectionHeader>
         <Input
           value={sendEmail}
           onChangeText={(v) => { setSendEmail(v); setSendErr(''); }}

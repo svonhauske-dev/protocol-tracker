@@ -91,14 +91,16 @@ function SegButton({ active, onPress, children }) {
 }
 
 // Horizontal "label … value" card that expands a time spinner BELOW it on tap.
-function TimeRow({ label, value, placeholder = 'Set', onChange }) {
+function TimeRow({ label, value, placeholder = 'set', onChange }) {
   const [open, setOpen] = useState(false);
   return (
     <View>
-      <Card onPress={() => setOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, marginBottom: 0 }}>
-        <Text tone="secondary" size="caption" style={{ flex: 1 }}>{label}</Text>
-        <Text size="caption" style={{ color: value ? theme.text.primary : theme.text.tertiary, fontFamily: fonts.mono.regular }}>{value || placeholder}</Text>
-      </Card>
+      {/* De-boxed leader-dot row (label ···· value), tap to expand the picker */}
+      <Pressable onPress={() => setOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: touch.min }}>
+        <Text tone="secondary" size="caption">{label}</Text>
+        <View style={{ flex: 1, height: 0, borderBottomWidth: 1, borderStyle: 'dotted', borderBottomColor: theme.border.subtle, marginHorizontal: spacing.sm }} />
+        <Text size="caption" style={{ color: value ? theme.text.primary : theme.text.tertiary, fontFamily: fonts.mono.regular, letterSpacing: 0.5 }}>{value || placeholder}</Text>
+      </Pressable>
       {open ? (
         <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
           <DateTimePicker value={parseTime(value)} mode="time" display="spinner" themeVariant="dark" onChange={(_e, d) => { if (d) onChange(fmtTime(d)); }} />

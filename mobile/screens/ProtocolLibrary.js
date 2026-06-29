@@ -235,14 +235,14 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
         {step === 'form' ? (
           <View>
             <View style={{ marginBottom: spacing.md }}>
-              <Label>Name</Label>
+              <SectionHeader rule={false}>Name</SectionHeader>
               <Input value={newName} onChangeText={setNewName} placeholder="e.g. Immunity Protocol" autoCapitalize="words" />
             </View>
 
             <View style={{ marginBottom: spacing.md }}>
-              <Label>Duration</Label>
+              <SectionHeader rule={false}>Duration</SectionHeader>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
-                {[['indefinite', 'Indefinite'], ['scheduled', 'Scheduled']].map(([val, label]) => (
+                {[['indefinite', 'indefinite'], ['scheduled', 'scheduled']].map(([val, label]) => (
                   <Button key={val} variant="selector" active={txMode === val} style={{ flex: 1 }} onPress={() => setTxMode(val)}>{label}</Button>
                 ))}
               </View>
@@ -250,7 +250,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
               {txMode === 'scheduled' ? (
                 <View>
                   <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
-                    {[['duration', 'For a duration'], ['dates', 'Specific dates']].map(([val, label]) => (
+                    {[['duration', 'for a duration'], ['dates', 'specific dates']].map(([val, label]) => (
                       <Button key={val} variant="selector" active={schedSub === val} style={{ flex: 1 }} onPress={() => setSchedSub(val)}>{label}</Button>
                     ))}
                   </View>

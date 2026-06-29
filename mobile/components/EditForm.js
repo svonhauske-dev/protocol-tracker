@@ -6,6 +6,7 @@ import SupplementNameAutocomplete from './SupplementNameAutocomplete';
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
 import { dateKey, fmtTime, isPausedSupp } from 'shared/lib/time';
 import Label from './Label';
+import SectionHeader from './SectionHeader';
 import Input from './Input';
 import Button from './Button';
 import Badge from './Badge';
@@ -141,7 +142,7 @@ export default function EditForm({
 
       {activeProtocols.length > 1 ? (
         <View style={{ marginBottom: spacing.md }}>
-          <Label>Protocol</Label>
+          <SectionHeader rule={false}>Protocol</SectionHeader>
           <View style={{ gap: spacing.xs }}>
             {activeProtocols.map((p) => (
               <Button key={p.id} variant="selector" active={form.protocol_id === p.id} fullWidth onPress={() => setForm((f) => ({ ...f, protocol_id: p.id }))}>
@@ -154,7 +155,7 @@ export default function EditForm({
       ) : null}
 
       <View style={{ marginBottom: spacing.md }}>
-        <Label>Name</Label>
+        <SectionHeader rule={false}>Name</SectionHeader>
         <SupplementNameAutocomplete
           value={form.name}
           history={supplementHistory}
@@ -167,13 +168,13 @@ export default function EditForm({
 
       {[['Dose', 'dose', 'e.g. 2 caps (300 mg)'], ['Notes', 'notes', 'e.g. Thorne · with food']].map(([lbl, key, ph]) => (
         <View key={key} style={{ marginBottom: spacing.md }}>
-          <Label>{lbl}</Label>
+          <SectionHeader rule={false}>{lbl}</SectionHeader>
           <Input value={form[key]} placeholder={ph} onChangeText={(v) => setForm((f) => ({ ...f, [key]: v }))} />
         </View>
       ))}
 
       <View style={{ marginBottom: spacing.md }}>
-        <Label>Category</Label>
+        <SectionHeader rule={false}>Category</SectionHeader>
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
           {CATEGORIES.map((cat) => (
             <Button key={cat} variant="selector" active={form.category === cat} style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto' }} onPress={() => setForm((f) => ({ ...f, category: cat, slots: [] }))}>
@@ -185,7 +186,7 @@ export default function EditForm({
 
       {/* Treatment */}
       <View style={{ marginBottom: spacing.md }}>
-        <Label>Treatment</Label>
+        <SectionHeader rule={false}>Treatment</SectionHeader>
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
           {TREATMENT_MODES.map(({ value, label }) => (
             <Button key={value} variant="selector" active={mode === value} style={{ flex: 1 }} onPress={() => handleModeChange(value)}>{label}</Button>
@@ -248,7 +249,7 @@ export default function EditForm({
 
       {/* When to take it */}
       <View style={{ marginBottom: spacing.md }}>
-        <Label>When to take it</Label>
+        <SectionHeader rule={false}>When to take it</SectionHeader>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
           {(scheduleMode === 'fasting'
             ? IF_SLOTS.filter((s) => {
@@ -293,7 +294,7 @@ export default function EditForm({
       {/* Which days */}
       {mode !== 'cycled' ? (
         <View style={{ marginBottom: spacing.md }}>
-          <Label>Which days</Label>
+          <SectionHeader rule={false}>Which days</SectionHeader>
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
             {DAYS.map((d, i) => (
               <Button key={i} variant="circle" active={form.days.includes(i)} onPress={() => toggleDay(i)}>{d[0]}</Button>
