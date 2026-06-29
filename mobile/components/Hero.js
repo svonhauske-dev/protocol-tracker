@@ -3,7 +3,7 @@ import Card from './Card';
 import Heading from './Heading';
 import Text from './Text';
 import Button from './Button';
-import AdherenceRing from './AdherenceRing';
+import Meter from './Meter';
 import { theme, spacing, typography } from '../theme';
 
 // getHeroState — ported verbatim from src/components/Hero.jsx (pure, no DOM).
@@ -21,61 +21,66 @@ function getHeroState({
   const dateStr = viewDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   if (isFuture) {
-    return { eyebrow: { text: `Viewing ${dateStr}` }, status: viewDate.toLocaleDateString('en-US', { weekday: 'long' }), submeta: null, statusKind: 'text' };
+    return { eyebrow: { text: `Viewing ${dateStr}` }, status: viewDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(), submeta: null, statusKind: 'text' };
   }
 
   if (isPast) {
-    // Clean eyebrow like today (no long date — the week strip shows the day).
     const pastSuffix = isReadOnly ? 'read-only' : 'editing';
     const pastEyebrow = { text: isReadOnly ? 'Read-only' : 'Editing' };
     const startedEyebrow = { text: 'Started at', suffix: pastSuffix, suffixTone: isReadOnly ? 'muted' : 'accent' };
-    // Completed → big green "Completed" (display size, like the time) + "N of N done".
-    if (allDone && coreTotal > 0) {
-      return { eyebrow: pastEyebrow, status: 'Completed', statusIsDone: true, submeta: completionText, statusKind: 'time' };
-    }
+    // Anchor day with a recorded time → the TIME stays the hero readout, even
+    // when complete; the green 100% meter carries "done". We never replace the
+    // data with a word, and never render a word at the numeric readout size.
     if (isAnchor && effectivePill) {
-      return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionText || 'Add items to start tracking', statusKind: 'time' };
+      return { eyebrow: startedEyebrow, status: effectivePill, submeta: completionText || 'add items to start tracking', statusKind: 'time' };
     }
     if (isAnchor) {
-      return { eyebrow: pastEyebrow, status: 'No anchor recorded', submeta: completionText, statusKind: 'text' };
+      return { eyebrow: pastEyebrow, status: 'no anchor recorded', submeta: completionText, statusKind: 'text' };
     }
-    return { eyebrow: pastEyebrow, status: coreTotal === 0 ? 'No items logged' : completionText, submeta: null, statusKind: 'text' };
+    // Non-anchor (no time): prose status. Completed → calm green "complete" in
+    // Grotesk (NOT the 44px numeral readout); the green meter is the celebration.
+    if (allDone && coreTotal > 0) {
+      return { eyebrow: pastEyebrow, status: 'complete', statusIsDone: true, submeta: completionText, statusKind: 'text' };
+    }
+    return { eyebrow: pastEyebrow, status: coreTotal === 0 ? 'no items logged' : completionText, submeta: null, statusKind: 'text' };
   }
 
   const todayEyebrowText = `Viewing Today, ${dateStr}`;
 
   if (scheduleMode === 'none') {
-    return { eyebrow: { text: todayEyebrowText }, status: viewDate.toLocaleDateString('en-US', { weekday: 'long' }), submeta: allDone ? 'Protocol complete' : completionText, statusKind: 'text' };
+    return { eyebrow: { text: todayEyebrowText }, status: viewDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(), submeta: allDone ? 'protocol complete' : completionText, statusKind: 'text' };
   }
 
   if (scheduleMode === 'fixed') {
-    if (allDone) return { eyebrow: { text: todayEyebrowText }, status: 'Done for today', submeta: null, statusKind: 'text' };
-    if (nextFixedSlot) return { eyebrow: { text: todayEyebrowText }, status: nextFixedSlot.time, submeta: `Next · ${nextFixedSlot.label}`, statusKind: 'time' };
-    return { eyebrow: { text: todayEyebrowText }, status: completionText || 'Fixed schedule', submeta: null, statusKind: 'text' };
+    if (allDone) return { eyebrow: { text: todayEyebrowText }, status: 'done for today', submeta: null, statusKind: 'text' };
+    if (nextFixedSlot) return { eyebrow: { text: todayEyebrowText }, status: nextFixedSlot.time, submeta: `next · ${nextFixedSlot.label}`, statusKind: 'time' };
+    return { eyebrow: { text: todayEyebrowText }, status: completionText || 'fixed schedule', submeta: null, statusKind: 'text' };
   }
 
   if (scheduleMode === 'fasting') {
-    if (allDone) return { eyebrow: { text: todayEyebrowText }, status: 'Done for today', submeta: null, statusKind: 'text' };
+    if (allDone) return { eyebrow: { text: todayEyebrowText }, status: 'done for today', submeta: null, statusKind: 'text' };
     if (isFlexibleIF) {
-      if (eatingWindowClose) return { eyebrow: { text: todayEyebrowText }, status: 'Fasting', submeta: eatingWindowOpen ? `Window ${eatingWindowOpen}–${eatingWindowClose}` : `Closed ${eatingWindowClose}`, statusKind: 'text' };
-      if (eatingWindowOpen) return { eyebrow: { text: todayEyebrowText }, status: `Open since ${eatingWindowOpen}`, submeta: completionText, statusKind: 'text', ifAction: 'close' };
-      return { eyebrow: { text: todayEyebrowText }, status: eatingWindowStart || '--:--', submeta: 'Tap to open your window', statusKind: 'time', ifAction: 'open' };
+      if (eatingWindowClose) return { eyebrow: { text: todayEyebrowText }, status: 'fasting', submeta: eatingWindowOpen ? `window ${eatingWindowOpen}–${eatingWindowClose}` : `closed ${eatingWindowClose}`, statusKind: 'text' };
+      if (eatingWindowOpen) return { eyebrow: { text: todayEyebrowText }, status: `open since ${eatingWindowOpen}`, submeta: completionText, statusKind: 'text', ifAction: 'close' };
+      return { eyebrow: { text: todayEyebrowText }, status: eatingWindowStart || '--:--', submeta: 'tap to open your window', statusKind: 'time', ifAction: 'open' };
     }
-    return { eyebrow: { text: todayEyebrowText }, status: eatingWindowStart || '--:--', submeta: 'Eating window opens', statusKind: 'time' };
+    return { eyebrow: { text: todayEyebrowText }, status: eatingWindowStart || '--:--', submeta: 'eating window opens', statusKind: 'time' };
   }
 
   // Anchor (medication / wakeup)
   if (!effectivePill) {
-    return { eyebrow: { text: todayEyebrowText }, status: 'Not started yet', submeta: null, statusKind: 'text', showSetAnchor: true };
+    return { eyebrow: { text: todayEyebrowText }, status: 'not started yet', submeta: null, statusKind: 'text', showSetAnchor: true };
   }
-  const anchorLine = `Started at ${effectivePill}`;
-  if (allDone) return { eyebrow: { text: 'Started at' }, status: 'Done for today', statusIsDone: true, submeta: anchorLine, statusKind: 'text', canEditAnchor: true };
+  // Completed anchor day keeps the TIME as the hero readout (white), with the
+  // green 100% meter signalling done — consistent with past anchor days, and the
+  // hero never loses its number on success.
+  if (allDone) return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: completionText, statusKind: 'time', canEditAnchor: true };
   // Eyebrow = "STARTED AT"; the time is the big number (the date is redundant — the picker shows it).
-  if (!completionText) return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: 'Add items to start tracking', statusKind: 'time', canEditAnchor: true };
+  if (!completionText) return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: 'add items to start tracking', statusKind: 'time', canEditAnchor: true };
   return { eyebrow: { text: 'Started at' }, status: effectivePill, submeta: completionText, statusKind: 'time', canEditAnchor: true };
 }
 
-const START_LABELS = { medication: 'Start my day', wakeup: 'Start my day' };
+const START_LABELS = { medication: 'start my day', wakeup: 'start my day' };
 
 export default function Hero(props) {
   const {
@@ -93,14 +98,17 @@ export default function Hero(props) {
   });
 
   const statusColor = state.statusIsDone ? theme.status.success : theme.text.primary;
-  const statusVisual = state.statusKind === 'time' ? 'display' : 'title';
+  // Data is the hero: time/percent readouts render in oversized tabular MONO
+  // (not Space Grotesk) so the app speaks one type language for data. Prose
+  // statuses ("Done for today") stay in Grotesk title.
+  const isTimeKind = state.statusKind === 'time';
 
   return (
     <Card
       style={{
         minHeight: 132,
         marginBottom: spacing.md,
-        backgroundColor: flashGreen ? theme.status.successSubtle : theme.surface.card,
+        backgroundColor: flashGreen ? theme.status.successSubtle : 'transparent',
         flexDirection: 'column',
         justifyContent: 'center',
       }}
@@ -120,7 +128,18 @@ export default function Hero(props) {
           {/* Status */}
           {state.status ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, minHeight: 44 }}>
-              <Heading level={2} visual={statusVisual} weight="bold" font="heading" numberOfLines={1} style={{ color: statusColor, flexShrink: 1 }}>
+              <Heading
+                level={2}
+                visual={isTimeKind ? 'display' : 'title'}
+                weight="bold"
+                font={isTimeKind ? 'body' : 'heading'}
+                numberOfLines={1}
+                style={{
+                  color: statusColor,
+                  flexShrink: 1,
+                  ...(isTimeKind ? { fontSize: typography.readout, lineHeight: 46, letterSpacing: -1, fontVariant: ['tabular-nums'] } : {}),
+                }}
+              >
                 {state.status}
               </Heading>
               {state.canEditAnchor && !isReadOnly && onEditAnchor ? (
@@ -137,7 +156,7 @@ export default function Hero(props) {
           {/* CTAs */}
           {state.showSetAnchor && !isReadOnly ? (
             <View style={{ marginTop: spacing.sm }}>
-              <Button variant="startDay" fullWidth onPress={startDay}>{START_LABELS[scheduleMode] || 'Start my day'}</Button>
+              <Button variant="startDay" fullWidth onPress={startDay}>{START_LABELS[scheduleMode] || 'start my day'}</Button>
             </View>
           ) : null}
           {state.ifAction && !isReadOnly ? (
@@ -147,13 +166,13 @@ export default function Hero(props) {
                 fullWidth
                 onPress={state.ifAction === 'open' ? openEatingWindow : closeEatingWindow}
               >
-                {state.ifAction === 'open' ? 'Start eating window' : 'Close eating window'}
+                {state.ifAction === 'open' ? 'start eating window' : 'close eating window'}
               </Button>
             </View>
           ) : null}
         </View>
 
-        <AdherenceRing percentage={pct} size={72} />
+        <Meter pct={pct} cells={8} orientation="vertical" cellW={22} cellH={6} gap={3} showText />
       </View>
     </Card>
   );

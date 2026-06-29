@@ -30,7 +30,7 @@ function FieldBox({ value, placeholder, open, onPress }) {
         minHeight: touch.min,
         borderWidth: theme.borderWidth.default,
         borderColor: open ? theme.accent.default : theme.border.subtle,
-        backgroundColor: theme.surface.input,
+        backgroundColor: "transparent",
         borderRadius: theme.radius.surface,
         paddingHorizontal: spacing.md,
         justifyContent: 'center',

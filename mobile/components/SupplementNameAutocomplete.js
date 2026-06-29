@@ -47,7 +47,7 @@ export default function SupplementNameAutocomplete({ value, onChangeText, histor
         onBlur={(e) => { setTimeout(() => setFocused(false), 150); onBlur?.(e); }}
       />
       {list.length > 0 ? (
-        <View style={{ marginTop: spacing.xxs, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, borderRadius: theme.radius.surface, backgroundColor: theme.surface.card, overflow: 'hidden' }}>
+        <View style={{ marginTop: spacing.xxs, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, borderRadius: theme.radius.surface, backgroundColor: theme.surface.canvas, overflow: 'hidden' }}>
           {showRecents ? (
             <Text style={{ paddingHorizontal: spacing.sm, paddingTop: spacing.xs, fontSize: typography.label, color: theme.text.tertiary, fontFamily: fonts.mono.semibold, letterSpacing: 0.5 }}>RECENT</Text>
           ) : null}

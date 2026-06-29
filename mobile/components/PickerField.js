@@ -40,7 +40,7 @@ export default function PickerField({ value, mode = 'time', placeholder = 'Selec
           width: width ?? '100%',
           borderWidth: theme.borderWidth.default,
           borderColor: open ? theme.accent.default : theme.border.subtle,
-          backgroundColor: theme.surface.input,
+          backgroundColor: "transparent",
           borderRadius: theme.radius.surface,
           paddingHorizontal: spacing.md,
           justifyContent: 'center',

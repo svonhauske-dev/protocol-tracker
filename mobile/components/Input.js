@@ -11,7 +11,9 @@ export default function Input({ variant = 'text', width, style, onFocus, onBlur,
   const [focused, setFocused] = useState(false);
 
   const base = {
-    backgroundColor: theme.surface.input,
+    // Hairline field on the canvas — defined by its border, not a grey fill.
+    // Focus brightens the border to white (the live/active accent).
+    backgroundColor: 'transparent',
     color: theme.text.primary,
     borderWidth: focused ? theme.borderWidth.accent : theme.borderWidth.default,
     borderColor: focused ? theme.accent.default : theme.border.subtle,

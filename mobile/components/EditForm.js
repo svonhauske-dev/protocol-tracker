@@ -36,7 +36,7 @@ function FieldButton({ value, placeholder, onPress }) {
         minHeight: touch.min,
         borderWidth: theme.borderWidth.default,
         borderColor: theme.border.subtle,
-        backgroundColor: theme.surface.input,
+        backgroundColor: "transparent",
         borderRadius: theme.radius.surface,
         paddingHorizontal: spacing.md,
         justifyContent: 'center',
@@ -92,7 +92,7 @@ export default function EditForm({
               style={mode === 'date' ? { width: screenW, marginLeft: -spacing.md } : undefined}
               onChange={(_e, d) => { if (d) setForm((f) => ({ ...f, [field]: mode === 'date' ? dateKey(d) : fmtTime(d) })); }}
             />
-            <Button variant="secondary" fullWidth onPress={() => setActivePicker(null)} style={{ marginTop: spacing.xs }}>Done</Button>
+            <Button variant="secondary" fullWidth onPress={() => setActivePicker(null)} style={{ marginTop: spacing.xs }}>done</Button>
           </View>
         ) : null}
       </>
@@ -135,7 +135,7 @@ export default function EditForm({
     <View>
       {editingId && isPausedSupp(form) ? (
         <View style={{ marginBottom: spacing.md, flexDirection: 'row' }}>
-          <Badge variant="neutral">Currently paused</Badge>
+          <Badge variant="neutral">currently paused</Badge>
         </View>
       ) : null}
 
@@ -162,7 +162,7 @@ export default function EditForm({
           onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
           onBlur={() => setNameTouched(true)}
         />
-        {nameTouched && !form.name?.trim() ? <Text style={errStyle}>Name is required</Text> : null}
+        {nameTouched && !form.name?.trim() ? <Text style={errStyle}>name is required</Text> : null}
       </View>
 
       {[['Dose', 'dose', 'e.g. 2 caps (300 mg)'], ['Notes', 'notes', 'e.g. Thorne · with food']].map(([lbl, key, ph]) => (
@@ -194,7 +194,7 @@ export default function EditForm({
 
         {mode === 'scheduled' ? (
           <View style={{ marginTop: spacing.sm }}>
-            <HelperText style={{ marginBottom: spacing.sm }}>Set a start and end date for this course.</HelperText>
+            <HelperText style={{ marginBottom: spacing.sm }}>set a start and end date for this course</HelperText>
             <DateRangeField
               startValue={form.starts_at || ''}
               endValue={form.ends_at || ''}
@@ -202,18 +202,18 @@ export default function EditForm({
               onChangeEnd={(v) => setForm((f) => ({ ...f, ends_at: v }))}
               onTouched={(which) => touchField(which === 'start' ? 'starts_at' : 'ends_at')}
             />
-            {(touched.starts_at && !form.starts_at) || (touched.ends_at && !form.ends_at) ? <Text style={[errStyle, { marginTop: spacing.xxs }]}>Start and end dates are required</Text> : null}
-            {dateOrderError ? <Text style={[errStyle, { marginTop: spacing.xs }]}>End date must be after start date</Text> : null}
+            {(touched.starts_at && !form.starts_at) || (touched.ends_at && !form.ends_at) ? <Text style={[errStyle, { marginTop: spacing.xxs }]}>start and end dates are required</Text> : null}
+            {dateOrderError ? <Text style={[errStyle, { marginTop: spacing.xs }]}>end date must be after start date</Text> : null}
           </View>
         ) : null}
 
         {mode === 'cycled' ? (
           <View style={{ marginTop: spacing.sm }}>
-            <HelperText style={{ marginBottom: spacing.sm }}>Cycle this on and off. Leave 'Ends' blank for indefinite cycling.</HelperText>
+            <HelperText style={{ marginBottom: spacing.sm }}>cycle this on and off. leave 'ends' blank for indefinite cycling</HelperText>
             <View style={{ marginBottom: spacing.sm }}>
               <Label style={{ marginBottom: spacing.xxs }}>Starts</Label>
-              <PickerField field="starts_at" mode="date" placeholder="Select date" />
-              {touched.starts_at && !form.starts_at ? <Text style={errStyle}>Required</Text> : null}
+              <PickerField field="starts_at" mode="date" placeholder="select date" />
+              {touched.starts_at && !form.starts_at ? <Text style={errStyle}>required</Text> : null}
             </View>
 
             {[['On', 'cycle_on_value', 'cycle_on_unit'], ['Off', 'cycle_off_value', 'cycle_off_unit']].map(([lbl, valKey, unitKey]) => (
@@ -233,15 +233,15 @@ export default function EditForm({
                     ))}
                   </View>
                 </View>
-                {touched[valKey] && (!form[valKey] || form[valKey] <= 0) ? <Text style={errStyle}>Must be greater than 0</Text> : null}
+                {touched[valKey] && (!form[valKey] || form[valKey] <= 0) ? <Text style={errStyle}>must be greater than 0</Text> : null}
               </View>
             ))}
 
             <View>
               <Label style={{ marginBottom: spacing.xxs }}>Ends (optional)</Label>
-              <PickerField field="ends_at" mode="date" placeholder="Select date" />
+              <PickerField field="ends_at" mode="date" placeholder="select date" />
             </View>
-            {dateOrderError ? <Text style={[errStyle, { marginTop: spacing.xs }]}>End date must be after start date</Text> : null}
+            {dateOrderError ? <Text style={[errStyle, { marginTop: spacing.xs }]}>end date must be after start date</Text> : null}
           </View>
         ) : null}
       </View>
@@ -280,11 +280,11 @@ export default function EditForm({
 
         {pinnedOpen ? (
           <View style={{ marginTop: spacing.sm }}>
-            <PickerField field="pinned_time" mode="time" placeholder="Select time" />
+            <PickerField field="pinned_time" mode="time" placeholder="select time" />
             <HelperText style={{ marginTop: spacing.xxxs }}>
               {form.slots.length === 0
-                ? 'Reminder at this exact time each day, independent of your schedule.'
-                : 'Additional reminder at this exact time, on top of your cascade slot.'}
+                ? 'reminder at this exact time each day, independent of your schedule'
+                : 'additional reminder at this exact time, on top of your cascade slot'}
             </HelperText>
           </View>
         ) : null}

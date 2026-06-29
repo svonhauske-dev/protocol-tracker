@@ -5,7 +5,7 @@ import { X } from 'lucide-react-native';
 import { PickerGroupContext } from './pickerGroup';
 import Text from './Text';
 import { useReduceMotion } from '../lib/useReduceMotion';
-import { theme, spacing, typography, radius, icon, touch, fonts } from '../theme';
+import { theme, spacing, typography, icon, touch, fonts } from '../theme';
 
 // Bottom-sheet modal — rendered as an in-app ABSOLUTE OVERLAY rather than RN's
 // native <Modal>. The native Modal (transparent) glitches on iOS: it flashes a
@@ -58,9 +58,14 @@ export default function Modal({ open, onClose, title, children, footer }) {
         <Animated.View
           style={{
             maxHeight: winH * 0.9,
-            backgroundColor: theme.surface.modal,
-            borderTopLeftRadius: radius.modal,
-            borderTopRightRadius: radius.modal,
+            // Terminal sheet: the canvas surface separated from the dimmed content
+            // by a hairline top rule — not a rounded raised grey panel. Sharp
+            // corners, per the app's zero-radius law.
+            backgroundColor: theme.surface.canvas,
+            borderTopWidth: theme.borderWidth.default,
+            borderColor: theme.border.subtle,
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
             overflow: 'hidden',
             // Reduce Motion: fade the sheet in place instead of sliding it up.
             opacity: reduceMotion ? slide : 1,
@@ -69,7 +74,7 @@ export default function Modal({ open, onClose, title, children, footer }) {
         >
           {/* Drag handle */}
           <View style={{ paddingTop: 16, paddingBottom: 12, alignItems: 'center' }}>
-            <View style={{ width: 36, height: 5, borderRadius: theme.radius.pill, backgroundColor: theme.border.subtle, opacity: 0.7 }} />
+            <View style={{ width: 32, height: 3, borderRadius: 0, backgroundColor: theme.border.strong }} />
           </View>
 
           {/* Header */}

@@ -26,7 +26,16 @@ export { spacing, radius, icon, touch, layout };
 // COMPLETION only — and the achromatic theme already does exactly that: the
 // AdherenceRing turns green (status.success) at 100%, the Hero status turns
 // green when done, success toasts are green. Everything else is white/grey.
-export const theme = themes.achromatic;
+// `border.divider` is a mobile-only addition (the web file is never edited): a
+// whisper-thin separator for section rules, à la the "Elevated Terminal" /
+// Stride direction. It's deliberately below the WCAG 1.4.11 3:1 floor — that
+// floor governs *interactive* component edges (which keep `border.subtle`), not
+// decorative separator rules. Kept out of `src/design-system.js` so the web
+// deploy's `check-contrast.js` gate never sees it.
+export const theme = {
+  ...themes.achromatic,
+  border: { ...themes.achromatic.border, divider: '#2A2A2A' },
+};
 
 // ── Typography ──────────────────────────────────────────────────────────────
 // Sizes port as-is. Font families become the names expo-font loads. RN
@@ -39,6 +48,9 @@ export const typography = {
   title: webTypography.title,
   heading: webTypography.heading,
   display: webTypography.display,
+  // Mobile-only "readout" tier — the oversized hero numeral. Data is the hero,
+  // so the primary time/percent reads bigger than any heading. Mono, tabular.
+  readout: 44,
 
   // Loaded via expo-font (see App.js). Until fonts load, RN falls back to system.
   fontBody: 'JetBrainsMono_400Regular',
@@ -82,6 +94,15 @@ export const letterSpacing = {
   heading: -0.4, // -0.02em @ 22px
   label: 1.0, //  0.08em @ 12px
   labelWide: 1.2,
+};
+
+// ── Motion ──────────────────────────────────────────────────────────────────
+// The reskin's motion language: a hard terminal blink (no easing — a CRT cursor
+// snaps, it doesn't fade), and a fast day reflow. Durations in ms.
+export const motion = {
+  cursorBlink: 530, // half-cycle; full blink ≈ 1060ms, hard on/off
+  dayReflow: 220,
+  toast: 250,
 };
 
 // ── Shadows ───────────────────────────────────────────────────────────────

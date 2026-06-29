@@ -5,7 +5,7 @@ import { theme, spacing } from '../theme';
 // variant: default | selected | accent | subtle. Pass onPress to make it
 // button-semantic (accessibilityRole + pressed feedback).
 const VARIANTS = {
-  default: { bg: theme.surface.card, border: theme.border.subtle },
+  default: { bg: 'transparent', border: theme.border.subtle },
   selected: { bg: theme.accent.subtle, border: theme.accent.default },
   accent: { bg: theme.accent.subtle, border: theme.accent.border },
   subtle: { bg: theme.surface.cardSubtle, border: theme.border.subtle },

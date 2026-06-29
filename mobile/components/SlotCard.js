@@ -104,11 +104,18 @@ export default function SlotCard({
   const allDone = slotSupps.length > 0 && slotSupps.every((s) => isChecked(slot.id, s.id));
   const [expanded, setExpanded] = useState(status === 'now' || status === 'missed');
 
+  // De-carded: no filled surface — a left STATUS GUTTER carries state (white =
+  // now/live, green = done, amber = missed, dim = future) and the row sits on the
+  // canvas, separated from neighbours by the list gap. More authored than a stack
+  // of grey boxes; status now reads from one element instead of a background tint.
+  const gutter =
+    status === 'done' ? theme.status.success :
+    status === 'missed' ? theme.status.warning :
+    status === 'now' ? theme.text.primary :
+    theme.border.subtle;
   const container = {
-    borderRadius: theme.radius.surface,
-    borderWidth: theme.borderWidth.default,
-    borderColor: sc.border,
-    backgroundColor: sc.bg,
+    borderLeftWidth: 3,
+    borderLeftColor: gutter,
     overflow: 'hidden',
   };
 
@@ -171,7 +178,7 @@ export default function SlotCard({
 
   return (
     <View style={container}>
-      <View style={{ flexDirection: 'row', alignItems: 'stretch', backgroundColor: sc.hbg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
         {/* Take-all icon button */}
         <Pressable
           onPress={canTakeAll ? () => takeAllInSlot(slot.id, slotSupps) : undefined}
@@ -195,7 +202,7 @@ export default function SlotCard({
         >
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Heading level={2} visual="title" weight="medium" style={{ color: theme.text.secondary }}>{slot.label}</Heading>
+              <Heading level={2} visual="title" weight="medium" style={{ color: status === 'now' ? theme.text.primary : theme.text.secondary }}>{slot.label}</Heading>
               <StatusBadge kind={sc.badge} isReadOnly={isReadOnly} />
             </View>
             {sublabelText ? <Text tone="secondary" size="label" style={{ marginTop: spacing.xxxs, minHeight: 16 }}>{sublabelText}</Text> : null}
@@ -210,7 +217,7 @@ export default function SlotCard({
       </View>
 
       {expanded ? (
-        <View style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderTopWidth: theme.borderWidth.default, borderTopColor: sc.border, gap: spacing.sm }}>
+        <View style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.divider, gap: spacing.sm }}>
           {slotSupps.map((supp) => {
             const done = isChecked(slot.id, supp.id);
             return (

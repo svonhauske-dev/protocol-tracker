@@ -3,15 +3,14 @@ import { ArrowLeft, ArrowRight } from 'lucide-react-native';
 import { dateKey } from 'shared/lib/time';
 import { calculateAdherenceForDate } from 'shared/lib/adherence';
 import Text from './Text';
-import AdherenceRing from './AdherenceRing';
+import Meter from './Meter';
 import IconButton from './IconButton';
-import { theme, spacing, fonts, typography, icon, shadow, letterSpacing as LS } from '../theme';
+import { theme, spacing, fonts, typography, icon, letterSpacing as LS } from '../theme';
 
 // 7-day navigator (RN port of src/components/WeekStrip.jsx, compact/mobile mode).
 // Each cell: reserved TODAY-pill slot, day abbrev, date number, 28px ring
 // (hollow circle for future days). Selected cell gets the accent highlight.
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const RING = 28;
 
 export default function WeekStrip({
   weekDates, logMap, supplements, activeSlotIds,
@@ -46,11 +45,14 @@ export default function WeekStrip({
                 alignItems: 'center',
                 paddingVertical: spacing.xs,
                 paddingHorizontal: spacing.xxs,
-                borderWidth: isSelected ? theme.borderWidth.accent : theme.borderWidth.default,
-                borderColor: isSelected ? theme.status.nowBorder : theme.border.subtle,
-                backgroundColor: isSelected ? theme.status.nowHover : theme.surface.card,
+                // Constant border width + no scale/shadow → the cell never changes
+                // size on selection or week-nav, so neighbours don't reflow/jump.
+                // Selection now reads from a white border + a faint tint on the
+                // same transparent-on-canvas surface every other cell uses.
+                borderWidth: theme.borderWidth.default,
+                borderColor: isSelected ? theme.text.primary : theme.border.subtle,
+                backgroundColor: isSelected ? theme.status.nowBg : 'transparent',
                 borderRadius: theme.radius.surface,
-                ...(isSelected ? { zIndex: 1, transform: [{ scale: 1.02 }], ...shadow.elevated } : null),
               }}
             >
               <Text style={{ fontSize: typography.caption2, color: isToday ? theme.text.primary : theme.text.secondary, fontFamily: fonts.mono.regular, marginBottom: spacing.xxs }}>{DAYS_SHORT[date.getDay()]}</Text>
@@ -59,11 +61,11 @@ export default function WeekStrip({
               <View style={{ paddingHorizontal: 6, paddingVertical: 2, marginBottom: spacing.xs, borderRadius: theme.radius.badge, backgroundColor: isToday ? theme.text.primary : 'transparent' }}>
                 <Text style={{ fontSize: typography.caption, color: isToday ? theme.surface.canvas : theme.text.primary, fontFamily: (isSelected || isToday) ? fonts.mono.semibold : fonts.mono.regular }}>{date.getDate()}</Text>
               </View>
-              {pct !== null ? (
-                <AdherenceRing percentage={pct} size={RING} showText={false} />
-              ) : (
-                <View style={{ width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2, borderColor: theme.border.subtle, opacity: 0.35 }} />
-              )}
+              {/* block-fill meter (future days render an empty track) — sits
+                  tight under the date, not floating in a tall reserved box */}
+              <View style={{ marginTop: spacing.xxs }}>
+                <Meter pct={pct ?? 0} cells={5} orientation="horizontal" cellW={5} cellH={5} gap={2} />
+              </View>
             </Pressable>
           );
         })}
