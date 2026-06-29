@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 import { shortDate } from 'shared/lib/time';
-import { Heading, Label, Text, Button, Input, Row, HelperText } from '../components';
+import { dbGetReceivedProtocols } from 'shared/lib/api';
+import { Heading, Label, Text, Button, Input, Row, HelperText, InlineTip, Cursor } from '../components';
 import DateRangeField from '../components/DateRangeField';
 import Modal from '../components/Modal';
 import TabBar from '../components/TabBar';
 import IconButton from '../components/IconButton';
-import { theme, spacing, typography, touch, icon } from '../theme';
+import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolLibrary.jsx — list
 // (Active/Saved), create (name + duration + stack/replace intent), open detail.
@@ -69,21 +70,49 @@ function IntentOption({ label, description, onPress }) {
   );
 }
 
-function EmptyState({ title, body, onNew }) {
+// Shell-voiced empty state matching the home screen: bordered block on canvas,
+// `// eyebrow` + `$ line ▌`, left-aligned. No centered ◯ glyph.
+function EmptyState({ eyebrow, line, onNew }) {
   return (
-    <View style={{ alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md }}>
-      <Heading level={2} visual="display" font="heading" style={{ color: theme.text.secondary, marginBottom: spacing.md }}>◯</Heading>
-      <Text weight="semibold" style={{ marginBottom: spacing.xs }}>{title}</Text>
-      <Heading level={2} visual="caption" font="heading" weight="medium" style={{ color: theme.text.secondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.lg }}>{body}</Heading>
-      {onNew ? <Button variant="primary" fullWidth onPress={onNew}>New protocol</Button> : null}
+    <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.xl, paddingHorizontal: spacing.md }}>
+      <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.md }}>{`// ${eyebrow}`}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: onNew ? spacing.lg : 0 }}>
+        <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>{`$ ${line}`}</Text>
+        <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
+      </View>
+      {onNew ? <Button variant="primary" fullWidth onPress={onNew}>+ new protocol</Button> : null}
     </View>
   );
 }
 
-export default function ProtocolLibrary({ protocols = [], supplements = [], onAddProtocol, onOpenDetail, onBack }) {
+export default function ProtocolLibrary({ protocols = [], supplements = [], onAddProtocol, onOpenDetail, onBack, userId, token, onActivateReceived, onDeclineReceived }) {
   const insets = useSafeAreaInsets();
   const today = new Date().toISOString().split('T')[0];
   const [tab, setTab] = useState('active');
+  // Received protocols (peer-to-peer) — pending sends to this user.
+  const [received, setReceived] = useState([]);
+  const [activateSend, setActivateSend] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    dbGetReceivedProtocols(userId, token).then((r) => setReceived(r || [])).catch(() => {});
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleReceived = async (intent) => {
+    if (busy || !activateSend) return;
+    setBusy(true);
+    const ok = await onActivateReceived?.(activateSend, intent);
+    setBusy(false);
+    if (ok) { setReceived((r) => r.filter((x) => x.id !== activateSend.id)); setActivateSend(null); }
+  };
+  const handleDecline = async () => {
+    if (busy || !activateSend) return;
+    setBusy(true);
+    const ok = await onDeclineReceived?.(activateSend);
+    setBusy(false);
+    if (ok) { setReceived((r) => r.filter((x) => x.id !== activateSend.id)); setActivateSend(null); }
+  };
   const [showNew, setShowNew] = useState(false);
   const [step, setStep] = useState('form');
   const [newName, setNewName] = useState('');
@@ -142,6 +171,29 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
+        {received.length > 0 ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <Label style={{ marginBottom: spacing.xs }}>Received</Label>
+            <InlineTip id="first-received" label="what you can do">tap a protocol to add it on top of your current one, replace it, or save it for later.</InlineTip>
+            <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+              {received.map((send) => (
+                <Row
+                  key={send.id}
+                  onPress={() => setActivateSend(send)}
+                  rightContent={<Text size="body" tone="tertiary">→</Text>}
+                  leftContent={
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text weight="medium" numberOfLines={1}>{send.name}</Text>
+                      <Text tone="secondary" size="caption">{(send.supplements_snapshot || []).length} supplements</Text>
+                    </View>
+                  }
+                  style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         <TabBar
           tabs={[{ value: 'active', label: 'Active' }, { value: 'archived', label: 'Saved' }]}
           active={tab}
@@ -151,7 +203,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
 
         {tab === 'active' ? (
           activeProtocols.length === 0 ? (
-            <EmptyState title="Build your first protocol" body="Group supplements that go together. You can run more than one at a time." onNew={() => setShowNew(true)} />
+            <EmptyState eyebrow="protocols — empty" line="build your first protocol" onNew={() => setShowNew(true)} />
           ) : (
             <View style={{ borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.subtle }}>
               {activeProtocols.map((p) => (
@@ -160,7 +212,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
             </View>
           )
         ) : archivedProtocols.length === 0 ? (
-          <EmptyState title="Nothing saved yet" body="Protocols you've saved for later or moved out of rotation will show up here." />
+          <EmptyState eyebrow="saved — empty" line="nothing saved yet" />
         ) : (
           <View style={{ borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.subtle }}>
             {archivedProtocols.map((p) => (
@@ -174,14 +226,14 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
       <Modal
         open={showNew}
         onClose={resetNew}
-        title={step === 'form' ? 'New protocol' : `Adding "${newName.trim()}"`}
+        title={step === 'form' ? 'new protocol' : `adding "${newName.trim()}"`}
         footer={
           step === 'form' ? (
             <Button variant="primary" fullWidth onPress={handleStep1Continue} disabled={!step1Valid || creating}>
-              {creating ? 'Creating…' : activeProtocols.length === 0 ? 'Create protocol' : 'Continue'}
+              {creating ? 'creating…' : activeProtocols.length === 0 ? 'create protocol' : 'continue'}
             </Button>
           ) : (
-            <Button variant="tertiary" fullWidth onPress={() => setStep('form')}>Back</Button>
+            <Button variant="tertiary" fullWidth onPress={() => setStep('form')}>back</Button>
           )
         }
       >
@@ -228,7 +280,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
                         onChangeStart={setStartsAt}
                         onChangeEnd={setEndsAt}
                       />
-                      {dateError ? <Text style={errStyle}>End date must be after start date</Text> : null}
+                      {dateError ? <Text style={errStyle}>end date must be after start date</Text> : null}
                     </View>
                   )}
                 </View>
@@ -237,11 +289,28 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
           </View>
         ) : (
           <View>
-            <IntentOption label="Replace current" description={`${replacedNames} will be archived. ${newName.trim()} becomes your active protocol.`} onPress={() => handleCreate('replace')} />
-            <IntentOption label="Stack on top" description="Supplements from all active protocols appear on your home screen simultaneously." onPress={() => handleCreate('stack')} />
-            <IntentOption label="Save for later" description="Added to your library without activating. Enable it whenever you're ready." onPress={() => handleCreate('save_later')} />
+            <IntentOption label="replace current" description={`${replacedNames} will be archived · ${newName.trim()} becomes your active protocol`} onPress={() => handleCreate('replace')} />
+            <IntentOption label="stack on top" description="supplements from all active protocols appear on your home screen simultaneously" onPress={() => handleCreate('stack')} />
+            <IntentOption label="save for later" description="added to your library without activating. enable it whenever you're ready" onPress={() => handleCreate('save_later')} />
           </View>
         )}
+      </Modal>
+
+      {/* Review a received protocol — add / replace / save / decline */}
+      <Modal
+        open={!!activateSend}
+        onClose={() => (busy ? null : setActivateSend(null))}
+        title={activateSend?.name || ''}
+      >
+        <Text tone="secondary" style={{ marginBottom: spacing.md, lineHeight: 21 }}>
+          {(activateSend?.supplements_snapshot || []).length} supplement{(activateSend?.supplements_snapshot || []).length !== 1 ? 's' : ''} included.
+        </Text>
+        <IntentOption label="add on top" description="appears alongside your current protocols on the home screen" onPress={() => handleReceived('stack')} />
+        <IntentOption label="replace current" description="archives your active protocols and makes this the active one" onPress={() => handleReceived('replace')} />
+        <IntentOption label="save for later" description="added to your saved tab without activating" onPress={() => handleReceived('save_later')} />
+        <View style={{ marginTop: spacing.sm }}>
+          <Button variant="destructive" fullWidth disabled={busy} onPress={handleDecline}>decline</Button>
+        </View>
       </Modal>
     </View>
   );

@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseHHMM, fmtTime, addMins } from 'shared/lib/time';
 import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets, computeIFSlotTimes } from 'shared/config';
 import { IF_SLOTS, SLOTS } from 'shared/lib/notifications';
-import { Label, HelperText, Text, Button, Card, Input } from '../components';
+import { Label, SectionHeader, HelperText, Text, Button, Card, Input } from '../components';
 import PickerField from '../components/PickerField';
 import Modal from '../components/Modal';
 import { theme, spacing, typography, touch, layout, fonts } from '../theme';
@@ -102,7 +102,7 @@ function TimeRow({ label, value, placeholder = 'Set', onChange }) {
       {open ? (
         <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
           <DateTimePicker value={parseTime(value)} mode="time" display="spinner" themeVariant="dark" onChange={(_e, d) => { if (d) onChange(fmtTime(d)); }} />
-          <Button variant="secondary" fullWidth onPress={() => setOpen(false)}>Done</Button>
+          <Button variant="secondary" fullWidth onPress={() => setOpen(false)}>done</Button>
         </View>
       ) : null}
     </View>
@@ -154,12 +154,12 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
     setSaveError(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (delay === 0) {
-      Promise.resolve(onSave(mode, config, behavior, time, adaptiveVal)).then((ok) => { if (ok === false) setSaveError("Couldn't save. Try again."); });
+      Promise.resolve(onSave(mode, config, behavior, time, adaptiveVal)).then((ok) => { if (ok === false) setSaveError("couldn't save — try again"); });
       return;
     }
     debounceRef.current = setTimeout(async () => {
       const ok = await onSave(mode, config, behavior, time, adaptiveVal);
-      if (ok === false) setSaveError("Couldn't save. Try again.");
+      if (ok === false) setSaveError("couldn't save — try again");
     }, delay);
   };
 
@@ -253,8 +253,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
 
   const EveningEditor = () => (
     <View style={{ marginBottom: spacing.lg }}>
-      <Label>Evening</Label>
-      <HelperText>{selectedCard === 'fasting' ? 'A fixed slot at the end of your day' : 'A fixed slot independent of your anchor'}</HelperText>
+      <SectionHeader>Evening</SectionHeader>
+      <HelperText>{selectedCard === 'fasting' ? 'a fixed slot at the end of your day' : 'a fixed slot independent of your anchor'}</HelperText>
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: em ? spacing.sm : 0 }}>
         {[[null, 'Off'], ['fixed', 'Fixed time'], ['before_sleep', 'Before sleep']].map(([val, label]) => (
           <SegButton key={String(val)} active={em === val} onPress={() => updateEvening({ evening_mode: val })}>{label}</SegButton>
@@ -284,8 +284,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
 
       {/* Schedule type */}
       <View style={{ marginBottom: spacing.lg }}>
-        <Label>Schedule type</Label>
-        {localMode === 'none' ? <HelperText>Add items without a time slot to use a simple checklist.</HelperText> : null}
+        <SectionHeader>Schedule type</SectionHeader>
+        {localMode === 'none' ? <HelperText>add items without a time slot to use a simple checklist</HelperText> : null}
         <View style={{ gap: spacing.md }}>
           {[0, 2].map((start) => (
             <View key={start} style={{ flexDirection: 'row', gap: spacing.md }}>
@@ -323,8 +323,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Daily timing */}
       {localMode !== 'fixed' && localMode !== 'none' && localMode !== 'fasting' ? (
         <View style={{ marginBottom: spacing.md }}>
-          <Label>Daily timing</Label>
-          {localBehavior === 'flexible' ? <HelperText>Tap each morning to set your schedule for the day.</HelperText> : null}
+          <SectionHeader>Daily timing</SectionHeader>
+          {localBehavior === 'flexible' ? <HelperText>tap each morning to set your schedule for the day</HelperText> : null}
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
             {[['flexible', 'Flexible'], ['consistent', 'Consistent']].map(([val, label]) => (
               <SegButton key={val} active={localBehavior === val} onPress={() => handleBehaviorChange(val)}>{label}</SegButton>
@@ -333,7 +333,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           {localBehavior === 'consistent' ? (
             <View style={{ marginTop: spacing.sm }}>
               <Label>Start time</Label>
-              <PickerField mode="time" value={localTime} onChange={handleTimeChange} placeholder="Set time" />
+              <PickerField mode="time" value={localTime} onChange={handleTimeChange} placeholder="set time" />
             </View>
           ) : null}
         </View>
@@ -342,8 +342,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Adaptive timing */}
       {isOffsetMode ? (
         <View style={{ marginBottom: spacing.md }}>
-          <Label>Adaptive timing</Label>
-          <HelperText>Slot times shift based on when you actually log each step.</HelperText>
+          <SectionHeader>Adaptive timing</SectionHeader>
+          <HelperText>slot times shift based on when you actually log each step</HelperText>
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
             {[[false, 'Off'], [true, 'On']].map(([val, label]) => (
               <SegButton key={label} active={localAdaptive === val} onPress={() => handleAdaptiveChange(val)}>{label}</SegButton>
@@ -356,7 +356,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {isOffsetMode ? (
         <>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Meal schedule</Label>
+            <SectionHeader>Meal schedule</SectionHeader>
             <View style={{ gap: spacing.xs }}>
               {[
                 { key_h: 'first_meal_offset_hours', key_m: 'first_meal_offset_minutes', label: 'First meal', caption: 'hours after your anchor' },
@@ -377,8 +377,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </View>
 
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Pre-meal window</Label>
-            <HelperText>How early before each meal to schedule pre-meal items</HelperText>
+            <SectionHeader>Pre-meal window</SectionHeader>
+            <HelperText>how early before each meal to schedule pre-meal items</HelperText>
             <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
           </View>
 
@@ -390,8 +390,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {selectedCard === 'fasting' ? (
         <View style={{ marginBottom: spacing.lg }}>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Eating window</Label>
-            <HelperText>{localConfig.eating_window_flexible ? 'Tap to open your window each day; meal times flow from when you actually start.' : 'Your eating window opens at the same time every day.'}</HelperText>
+            <SectionHeader>Eating window</SectionHeader>
+            <HelperText>{localConfig.eating_window_flexible ? 'tap to open your window each day; meal times flow from when you actually start' : 'your eating window opens at the same time every day'}</HelperText>
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               {[[false, 'Fixed'], [true, 'Flexible']].map(([val, label]) => (
                 <SegButton key={label} active={!!localConfig.eating_window_flexible === val} onPress={() => updateConfig('eating_window_flexible', val)}>{label}</SegButton>
@@ -400,11 +400,11 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </View>
           <View style={{ marginBottom: spacing.md }}>
             <Label>{localConfig.eating_window_flexible ? 'Target window start' : 'Eating window start'}</Label>
-            <HelperText>{localConfig.eating_window_flexible ? 'When to nudge you to open your window' : 'When your eating window opens each day'}</HelperText>
-            <PickerField mode="time" value={localConfig.eating_window_start || ''} onChange={(v) => updateConfig('eating_window_start', v || null)} placeholder="Set time" />
+            <HelperText>{localConfig.eating_window_flexible ? 'when to nudge you to open your window' : 'when your eating window opens each day'}</HelperText>
+            <PickerField mode="time" value={localConfig.eating_window_start || ''} onChange={(v) => updateConfig('eating_window_start', v || null)} placeholder="set time" />
           </View>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Window duration</Label>
+            <SectionHeader>Window duration</SectionHeader>
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               {[[4, '4 hr'], [6, '6 hr'], [8, '8 hr'], [10, '10 hr'], [12, '12 hr']].map(([val, lbl]) => (
                 <SegButton key={val} active={(localConfig.eating_window_duration_hours ?? 8) === val} onPress={() => updateConfig('eating_window_duration_hours', val)}>{lbl}</SegButton>
@@ -412,7 +412,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             </View>
           </View>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Meals</Label>
+            <SectionHeader>Meals</SectionHeader>
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               {[[2, '2 meals'], [3, '3 meals']].map(([val, lbl]) => (
                 <SegButton key={val} active={(localConfig.meal_count ?? 3) === val} onPress={() => tryUpdateMealCount(val)}>{lbl}</SegButton>
@@ -420,8 +420,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             </View>
           </View>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Pre-meal window</Label>
-            <HelperText>How early before each meal to take pre-meal items</HelperText>
+            <SectionHeader>Pre-meal window</SectionHeader>
+            <HelperText>how early before each meal to take pre-meal items</HelperText>
             <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
           </View>
           <EveningEditor />
@@ -432,7 +432,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {selectedCard === 'fixed' ? (
         <>
           <View style={{ marginBottom: spacing.md }}>
-            <Label>Fixed times</Label>
+            <SectionHeader>Fixed times</SectionHeader>
             <View style={{ gap: spacing.xs }}>
               {[['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['after_dinner', 'Evening']].map(([key, label]) => (
                 <TimeRow key={key} label={label} value={localConfig.fixed_times?.[key] || ''} onChange={(v) => updateFixed(key, v)} />
@@ -440,9 +440,9 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
             </View>
           </View>
           <View style={{ marginBottom: spacing.lg }}>
-            <Label>Pre-meal window</Label>
+            <SectionHeader>Pre-meal window</SectionHeader>
             <NumberCard label="Pre-meal items" fields={[{ value: localConfig.pre_meal_window ?? 30, unit: 'min', width: 64, onChange: (n) => updateConfig('pre_meal_window', n) }]} />
-            <HelperText style={{ marginTop: spacing.xxxs, marginBottom: 0 }}>Pre-Breakfast, Pre-Lunch, and Pre-Dinner slots are scheduled this many minutes before their meal.</HelperText>
+            <HelperText style={{ marginTop: spacing.xxxs, marginBottom: 0 }}>pre-breakfast, pre-lunch, and pre-dinner slots are scheduled this many minutes before their meal</HelperText>
           </View>
         </>
       ) : null}
@@ -450,10 +450,10 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       {/* Live preview */}
       {showPreview ? (
         <View style={{ marginBottom: spacing.lg }}>
-          <Label>{localMode === 'fixed' || localMode === 'fasting' ? 'Schedule preview' : 'Preview — 7:00 am anchor'}</Label>
-          <View style={{ borderRadius: theme.radius.surface, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: theme.surface.card, padding: spacing.md, gap: spacing.xs }}>
+          <Label>{localMode === 'fixed' || localMode === 'fasting' ? 'schedule preview' : 'preview — 7:00 am anchor'}</Label>
+          <View style={{ borderRadius: theme.radius.surface, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: "transparent", padding: spacing.md, gap: spacing.xs }}>
             {previewRows.length === 0 ? (
-              <Text tone="secondary" size="caption">No times configured yet</Text>
+              <Text tone="secondary" size="caption">no times configured yet</Text>
             ) : (
               previewRows.map((row, i) => (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -470,15 +470,15 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
       <Modal
         open={orphanConfirm !== null}
         onClose={() => setOrphanConfirm(null)}
-        title="Supplements will be hidden"
+        title="supplements will be hidden"
         footer={
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-            <Button variant="tertiary" fullWidth onPress={() => setOrphanConfirm(null)}>Cancel</Button>
-            <Button variant="primary" fullWidth onPress={() => { updateConfig('meal_count', orphanConfirm); setOrphanConfirm(null); }}>Continue</Button>
+            <Button variant="tertiary" fullWidth onPress={() => setOrphanConfirm(null)}>cancel</Button>
+            <Button variant="primary" fullWidth onPress={() => { updateConfig('meal_count', orphanConfirm); setOrphanConfirm(null); }}>continue</Button>
           </View>
         }
       >
-        <Text tone="secondary">You have supplements assigned to slots that won't exist with fewer meals. They'll be hidden from your home screen until you reassign them.</Text>
+        <Text tone="secondary">you have supplements assigned to slots that won't exist with fewer meals. they'll be hidden from your home screen until you reassign them</Text>
       </Modal>
     </View>
   );

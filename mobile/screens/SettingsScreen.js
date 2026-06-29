@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
-import { Heading, Label, Text, Button, Row, Input, Checkbox } from '../components';
+import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
@@ -37,6 +37,10 @@ function PasswordRule({ met, label }) {
 }
 
 const TITLES = { main: 'Settings', account: 'Account', schedule: 'Schedule' };
+
+// Nav rows report STATE, not a generic chevron. The schedule row shows the
+// active mode; the account row shows the signed-in email.
+const SCHED_LABEL = { none: 'NO SCHEDULE', medication: 'MEDICATION', wakeup: 'WAKE-UP', fixed: 'FIXED', fasting: 'FASTING' };
 
 export default function SettingsScreen({
   user, token, profile, onProfileUpdate, onSignOut, onBack,
@@ -138,7 +142,7 @@ export default function SettingsScreen({
         borderBottomColor: theme.border.subtle,
       }}
     >
-      <IconButton onPress={onBackPress} accessibilityLabel="Back"><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
+      <IconButton onPress={onBackPress} accessibilityLabel="Back"><ArrowLeft size={icon.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
       <Heading level={1} visual="body" font="body">{title}</Heading>
       <View style={{ width: touch.min }} />
     </View>
@@ -154,23 +158,43 @@ export default function SettingsScreen({
       {/* Main layer — always mounted; sub-pages slide in over it (iOS push feel) */}
       {header(TITLES.main, onBack)}
       <ScrollView {...scrollProps}>
-        <Heading level={2} visual="label" style={{ marginBottom: spacing.xs }}>Schedule</Heading>
-        <Row onPress={() => setView('schedule')} leftContent={<Text tone="secondary">Edit schedule</Text>} />
-        <Divider />
-        <Heading level={2} visual="label" style={{ marginBottom: spacing.xs }}>Account</Heading>
-        <Row onPress={() => setView('account')} leftContent={<Text tone="secondary">Edit account</Text>} />
-        <Divider />
-        <Heading level={2} visual="label" style={{ marginBottom: spacing.xs }}>Notifications</Heading>
+        <SectionHeader>Schedule</SectionHeader>
         <Row
-          onPress={() => onToggleReminders?.(!remindersEnabled)}
-          leftContent={<Text tone="secondary">Daily reminders</Text>}
-          rightContent={<Text weight="semibold" style={{ color: remindersEnabled ? theme.accent.default : theme.text.tertiary }}>{remindersEnabled ? 'On' : 'Off'}</Text>}
+          onPress={() => setView('schedule')}
+          leftContent={<Text tone="secondary">Edit schedule</Text>}
+          rightContent={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text size="label" tone="tertiary">{SCHED_LABEL[scheduleMode] || ''}</Text>
+              <Text size="body" tone="tertiary">→</Text>
+            </View>
+          }
         />
-        <Divider />
-        <Heading level={2} visual="label" style={{ marginBottom: spacing.xs }}>About</Heading>
-        <Row onPress={() => Linking.openURL(PRIVACY_URL)} leftContent={<Text tone="secondary">Privacy policy</Text>} />
-        <Divider />
-        <Button variant="secondary" fullWidth onPress={() => setShowSignOutConfirm(true)}>Sign out</Button>
+
+        <SectionHeader style={{ marginTop: spacing.lg }}>Account</SectionHeader>
+        <Row
+          onPress={() => setView('account')}
+          leftContent={<Text tone="secondary">Edit account</Text>}
+          rightContent={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text size="label" tone="tertiary" numberOfLines={1} style={{ maxWidth: 150 }}>{user.email}</Text>
+              <Text size="body" tone="tertiary">→</Text>
+            </View>
+          }
+        />
+
+        <SectionHeader style={{ marginTop: spacing.lg }}>Notifications</SectionHeader>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touch.min }}>
+          <Text tone="secondary">Daily reminders</Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Button variant="selector" active={remindersEnabled} onPress={() => { if (!remindersEnabled) onToggleReminders?.(true); }} style={{ minWidth: 54 }}>On</Button>
+            <Button variant="selector" active={!remindersEnabled} onPress={() => { if (remindersEnabled) onToggleReminders?.(false); }} style={{ minWidth: 54, marginLeft: -1 }}>Off</Button>
+          </View>
+        </View>
+
+        <SectionHeader style={{ marginTop: spacing.lg }}>About</SectionHeader>
+        <Row onPress={() => Linking.openURL(PRIVACY_URL)} leftContent={<Text tone="secondary">Privacy policy</Text>} rightContent={<Text size="body" tone="tertiary">→</Text>} />
+
+        <Button variant="secondary" fullWidth style={{ marginTop: spacing.xl }} onPress={() => setShowSignOutConfirm(true)}>Sign out</Button>
       </ScrollView>
 
       {/* Account — slides in from the right */}

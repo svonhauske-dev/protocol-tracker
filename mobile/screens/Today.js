@@ -20,6 +20,12 @@ import {
   dbDeleteSupp,
   dbHardDeleteSupp,
   dbSaveSchedule,
+  dbSendProtocol,
+  dbLookupUserByEmail,
+  dbNotifyProtocolSent,
+  dbGetReceivedProtocols,
+  dbUpdateProtocolSend,
+  supa,
 } from 'shared/lib/api';
 import {
   dateKey,
@@ -41,7 +47,7 @@ import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, rescheduleSlotReminders, cancelAllReminders } from '../lib/notifications';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
-import { Heading, Text, Button } from '../components';
+import { Heading, Text, Button, Cursor, InlineTip } from '../components';
 import Hero from '../components/Hero';
 import SlotCard from '../components/SlotCard';
 import WeekStrip from '../components/WeekStrip';
@@ -57,6 +63,15 @@ import SlideScreen from '../components/SlideScreen';
 import IconButton from '../components/IconButton';
 
 const ANYTIME_SLOT = { id: 'anytime', label: 'Anytime', sublabel: 'No specific time', icon: '◦' };
+
+// Day-1 inline tip per schedule mode — shows once in the empty state to teach the
+// scheduling mental model in context, then never returns (RN port of web DAY1_TIP).
+const DAY1_TIP = {
+  medication: { label: 'how anchors work', body: 'each morning, tap "start my day" to set today\'s anchor. origin cascades pre-meal, meal, and evening items from there.' },
+  wakeup: { label: 'how anchors work', body: 'each morning, tap "start my day" to set today\'s anchor. origin cascades pre-meal, meal, and evening items from there.' },
+  fasting: { label: 'how your day works', body: 'items appear in slots based on your eating window. origin schedules pre-meal items, meals, and evening items from the window you set.' },
+  fixed: { label: 'how your day works', body: 'items appear at the fixed times you set. edit them anytime from settings.' },
+};
 
 const addDays = (d, n) => { const r = new Date(d.getTime()); r.setDate(r.getDate() + n); return r; };
 // Rolling 7-day window ENDING at `end` (today is the last cell) — matches App.jsx.
@@ -74,12 +89,22 @@ const sliceForDay = (checked, dk) => {
   return out;
 };
 
-// Avatar = the shared IconButton as a circle with the initial.
+// Avatar = a sharp 1px mono box with the initial + the "origin center point"
+// mark bottom-right. Square, not a round disc — it obeys the app's own zero-
+// radius rule instead of the default Gmail/Slack circle-chip, and matches the
+// square icon-buttons sitting beside it.
 function Avatar({ initial, onPress }) {
   return (
-    <IconButton shape="circle" onPress={onPress} accessibilityLabel="Settings">
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Settings"
+      style={{ width: touch.min, height: touch.min, borderWidth: 1, borderColor: theme.border.strong, alignItems: 'center', justifyContent: 'center' }}
+    >
       <Text weight="medium" size="body">{initial}</Text>
-    </IconButton>
+      {/* origin center point */}
+      <View style={{ position: 'absolute', right: -1, bottom: -1, width: 4, height: 4, borderRadius: 2, backgroundColor: theme.text.primary }} />
+    </Pressable>
   );
 }
 
@@ -138,6 +163,7 @@ export default function Today({ user, onSignOut }) {
   const isToday = dk === dateKey(TODAY);
   const isFuture = startOfDay(viewDate) > TODAY;
   const isPast = !isToday && startOfDay(viewDate) < TODAY;
+  const isDay1 = !!profile?.created_at && dateKey(new Date(profile.created_at)) === dateKey(TODAY);
   const editable = isToday || (isPast && pastDayEditing);
   const readOnly = !editable;
 
@@ -387,11 +413,11 @@ export default function Today({ user, onSignOut }) {
   const toggleReminders = async (next) => {
     if (next) {
       const ok = await requestNotificationPermission();
-      if (!ok) { showToast('Allow notifications in iOS Settings to get reminders', { tone: 'warning' }); return; }
+      if (!ok) { showToast('allow notifications in ios settings', { tone: 'warning' }); return; }
     }
     global.localStorage.setItem('reminders_enabled', next ? '1' : '0');
     setRemindersEnabled(next);
-    showToast(next ? 'Reminders on' : 'Reminders off', { tone: 'success' });
+    showToast(next ? 'reminders on' : 'reminders off', { tone: 'success' });
   };
 
   const anytimeSupps = homeSupps.filter((s) => (!Array.isArray(s.slots) || s.slots.length === 0) && inDay(s));
@@ -509,10 +535,10 @@ export default function Today({ user, onSignOut }) {
         );
         if (rows?.[0]) setSupps((s) => [...s, { ...rows[0], paused: rows[0].paused ?? false }]);
       }
-      showToast(editingId ? `Updated ${form.name}` : `Added ${form.name}`, { tone: 'success' });
+      showToast(editingId ? `updated · ${form.name}` : `added · ${form.name}`, { tone: 'success' });
       closeForm();
     } catch (err) {
-      setSubmitError("Couldn't save — try again");
+      setSubmitError("couldn't save");
     } finally {
       setSubmitting(false);
     }
@@ -525,9 +551,9 @@ export default function Today({ user, onSignOut }) {
       await dbDeleteSupp(editingId, token());
       setSupps((s) => s.filter((x) => x.id !== editingId));
       closeForm();
-      showToast(name ? `Deleted ${name}` : 'Deleted', { tone: 'success' });
+      showToast(name ? `deleted · ${name}` : 'deleted', { tone: 'success' });
     } catch (err) {
-      setSubmitError("Couldn't delete — try again");
+      setSubmitError("couldn't delete");
     }
   }
 
@@ -557,6 +583,68 @@ export default function Today({ user, onSignOut }) {
   }
 
 
+  // ── Peer-to-peer protocol send / receive (ports of App.jsx) ──
+  const sendProtocolToUser = async (protocol, email) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (cleanEmail === (user.email || '').toLowerCase()) return { ok: false, error: "that's your own email" };
+    try {
+      const t = token();
+      const match = await dbLookupUserByEmail(cleanEmail, t);
+      if (!match?.user_id) return { ok: false, error: 'no origin user with that email' };
+      const snapshot = supps.filter((s) => s.protocol_id === protocol.id).map((s) => ({ name: s.name, dose: s.dose, notes: s.notes, slots: s.slots, days: s.days, category: s.category }));
+      const rows = await dbSendProtocol({ clinician_id: user.id, patient_id: match.user_id, source_protocol_id: protocol.id, name: protocol.name, supplements_snapshot: snapshot }, t);
+      const sendRow = Array.isArray(rows) ? rows[0] : rows;
+      const label = match.display_name?.trim().split(' ')[0] || cleanEmail;
+      showToast(`sent to ${label}`, { tone: 'success' });
+      if (sendRow?.id) dbNotifyProtocolSent(sendRow.id, profile?.display_name || 'someone', t).catch(() => {});
+      return { ok: true };
+    } catch (e) { console.error(e); return { ok: false, error: "couldn't send — try again" }; }
+  };
+
+  const declineReceived = async (send) => {
+    try { await dbUpdateProtocolSend(send.id, { status: 'declined' }, token()); showToast(`${send.name} declined`, { tone: 'success' }); return true; }
+    catch (e) { console.error(e); showToast("couldn't decline", { tone: 'error' }); return false; }
+  };
+
+  // intent: 'stack' (add on top) | 'replace' (archive actives first) | 'save_later' (add archived)
+  const activateReceived = async (send, intent = 'stack') => {
+    let newProto = null;
+    try {
+      const t = token();
+      if (intent === 'replace') {
+        const activeProtos = protocols.filter((p) => p.status === 'active');
+        await Promise.all(activeProtos.map((p) => dbArchiveProtocol(p.id, t)));
+        setProtocols((prev) => prev.map((p) => (p.status === 'active' ? { ...p, status: 'archived' } : p)));
+        const archivedIds = new Set(activeProtos.map((p) => p.id));
+        setSupps((s) => s.map((x) => (archivedIds.has(x.protocol_id) ? { ...x, status: 'active', paused: false } : x)));
+      }
+      const newStatus = intent === 'save_later' ? 'archived' : 'active';
+      const protoRows = await dbAddProtocol({ name: send.name, status: newStatus, user_id: user.id, treatment_mode: 'indefinite', source: 'user' }, t);
+      newProto = protoRows?.[0];
+      if (!newProto) throw new Error('Protocol creation failed');
+      const snapshot = send.supplements_snapshot || [];
+      const suppRows = await Promise.all(snapshot.map((s) => dbAddSupp({ name: s.name, dose: s.dose || '', notes: s.notes || '', slots: s.slots || [], days: s.days?.length ? s.days : [0, 1, 2, 3, 4, 5, 6], category: s.category || 'Oral', paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id: newProto.id, treatment_mode: 'indefinite', starts_at: null, ends_at: null, cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null }, t)));
+      setProtocols((p) => [...p, newProto]);
+      setSupps((s) => [...s, ...suppRows.flatMap((r) => r || []).map((x) => ({ ...x, paused: x.paused ?? false }))]);
+      await dbUpdateProtocolSend(send.id, { status: 'activated' }, t);
+      const verb = intent === 'save_later' ? 'saved' : 'activated';
+      showToast(`${send.name} ${verb}`, { tone: 'success' });
+      return true;
+    } catch (e) {
+      console.error(e);
+      if (newProto) {
+        try {
+          const t = token();
+          const inserted = await supa('GET', `/rest/v1/supplements?protocol_id=eq.${newProto.id}&select=id`, null, t).catch(() => []);
+          await Promise.all((inserted || []).map((s) => dbHardDeleteSupp(s.id, t).catch(() => {})));
+          await dbDeleteProtocol(newProto.id, t).catch(() => {});
+        } catch (rb) { console.error('activateReceived rollback failed:', rb); }
+      }
+      showToast("couldn't save protocol", { tone: 'error' });
+      return false;
+    }
+  };
+
   // WeekStrip data
   const activeSlotIds = new Set(coreSlotIds);
   const weekDates = getWeekDatesEndingAt(viewedWeekEnd);
@@ -581,11 +669,11 @@ export default function Today({ user, onSignOut }) {
       }
       const rows = await dbAddProtocol({ ...data, status, user_id: user.id }, t);
       if (rows?.[0]) setProtocols((p) => [...p, rows[0]]);
-      showToast(`${data.name} created`, { tone: 'success' });
+      showToast(`created · ${data.name}`, { tone: 'success' });
       return rows?.[0] ?? null;
     } catch (err) {
       console.error(err);
-      showToast("Couldn't create protocol. Try again.", { tone: 'error' });
+      showToast("couldn't create protocol", { tone: 'error' });
       return null;
     }
   }
@@ -598,7 +686,7 @@ export default function Today({ user, onSignOut }) {
       await dbUpdateProtocol({ ...proto, user_id: user.id }, token());
       setProtocols((p) => p.map((x) => (x.id === proto.id ? { ...x, ...proto } : x)));
       syncDetail(proto.id, proto);
-    } catch (err) { console.error(err); showToast("Couldn't save. Try again.", { tone: 'error' }); }
+    } catch (err) { console.error(err); showToast("couldn't save", { tone: 'error' }); }
   };
   const archiveProtocol = async (proto) => {
     try {
@@ -606,8 +694,8 @@ export default function Today({ user, onSignOut }) {
       setProtocols((p) => p.map((x) => (x.id === proto.id ? { ...x, status: 'archived' } : x)));
       setSupps((s) => s.map((x) => (x.protocol_id === proto.id ? { ...x, status: 'active', paused: false } : x)));
       syncDetail(proto.id, { status: 'archived' });
-      showToast(`${proto.name} saved`, { tone: 'success' });
-    } catch (err) { console.error(err); showToast("Couldn't save. Try again.", { tone: 'error' }); }
+      showToast(`saved · ${proto.name}`, { tone: 'success' });
+    } catch (err) { console.error(err); showToast("couldn't save", { tone: 'error' }); }
   };
   const activateProtocol = async (proto, intent = 'stack') => {
     try {
@@ -622,8 +710,8 @@ export default function Today({ user, onSignOut }) {
       await dbActivateProtocol(proto.id, t);
       setProtocols((p) => p.map((x) => (x.id === proto.id ? { ...x, status: 'active' } : x)));
       syncDetail(proto.id, { status: 'active' });
-      showToast(`${proto.name} activated`, { tone: 'success' });
-    } catch (err) { console.error(err); showToast("Couldn't activate. Try again.", { tone: 'error' }); }
+      showToast(`activated · ${proto.name}`, { tone: 'success' });
+    } catch (err) { console.error(err); showToast("couldn't activate", { tone: 'error' }); }
   };
   const deleteProtocol = async (proto) => {
     try {
@@ -635,21 +723,21 @@ export default function Today({ user, onSignOut }) {
       await dbDeleteProtocol(proto.id, t);
       setSupps((s) => s.filter((x) => x.protocol_id !== proto.id));
       setProtocols((p) => p.filter((x) => x.id !== proto.id));
-      showToast(`${proto.name} deleted`, { tone: 'success' });
-    } catch (err) { console.error(err); showToast("Couldn't delete. Try again.", { tone: 'error' }); }
+      showToast(`deleted · ${proto.name}`, { tone: 'success' });
+    } catch (err) { console.error(err); showToast("couldn't delete", { tone: 'error' }); }
   };
   const togglePauseSupp = async (supp) => {
     const wasPaused = isPausedSupp(supp);
     const day = dateKey(TODAY);
     const updated = { ...supp, status: wasPaused ? 'active' : 'paused', paused: !wasPaused, pause_intervals: wasPaused ? withPauseEnded(supp, day) : withPauseStarted(supp, day) };
-    try { await dbUpdateSupp(updated, token()); setSupps((s) => s.map((x) => (x.id === supp.id ? updated : x))); showToast(wasPaused ? `Resumed ${supp.name}` : `Paused ${supp.name}`, { tone: 'success' }); } catch (err) { console.error(err); showToast("Couldn't update. Try again.", { tone: 'error' }); }
+    try { await dbUpdateSupp(updated, token()); setSupps((s) => s.map((x) => (x.id === supp.id ? updated : x))); showToast(wasPaused ? `resumed · ${supp.name}` : `paused · ${supp.name}`, { tone: 'success' }); } catch (err) { console.error(err); showToast("couldn't update", { tone: 'error' }); }
   };
   const resumeSuppById = async (supp) => {
     const updated = { ...supp, status: 'active', paused: false, pause_intervals: withPauseEnded(supp, dateKey(TODAY)) };
-    try { await dbUpdateSupp(updated, token()); setSupps((s) => s.map((x) => (x.id === supp.id ? updated : x))); showToast(`${supp.name} resumed`, { tone: 'success' }); } catch (err) { console.error(err); showToast("Couldn't resume. Try again.", { tone: 'error' }); }
+    try { await dbUpdateSupp(updated, token()); setSupps((s) => s.map((x) => (x.id === supp.id ? updated : x))); showToast(`resumed · ${supp.name}`, { tone: 'success' }); } catch (err) { console.error(err); showToast("couldn't resume", { tone: 'error' }); }
   };
   const deleteSuppById = async (supp) => {
-    try { await dbDeleteSupp(supp.id, token()); setSupps((s) => s.filter((x) => x.id !== supp.id)); showToast(`Deleted ${supp.name}`, { tone: 'success' }); } catch (err) { console.error(err); showToast("Couldn't delete. Try again.", { tone: 'error' }); }
+    try { await dbDeleteSupp(supp.id, token()); setSupps((s) => s.filter((x) => x.id !== supp.id)); showToast(`deleted · ${supp.name}`, { tone: 'success' }); } catch (err) { console.error(err); showToast("couldn't delete", { tone: 'error' }); }
   };
   function openAddForProtocol(protocolId) {
     setEditingId(null);
@@ -755,6 +843,7 @@ export default function Today({ user, onSignOut }) {
     );
   };
 
+  const hasMultiSuppSlot = coreSlotIds.some((sid) => getSuppsForSlot(sid).length > 1);
   const cards = [];
   let pi = 0;
   for (const sd of slotDefsWithSupps) {
@@ -801,18 +890,18 @@ export default function Today({ user, onSignOut }) {
           <Avatar initial={initial} onPress={() => setShowSettings(true)} />
           <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
             <Heading level={1} visual="body" weight="medium" font="body" numberOfLines={1} style={{ color: theme.text.secondary, textTransform: 'lowercase' }}>{firstName}</Heading>
-            {/* static terminal prompt cursor — the one quiet brand nod */}
-            <View style={{ width: 7, height: 15, backgroundColor: theme.accent.default, marginLeft: 5 }} />
+            {/* the blinking terminal cursor — the motion signature */}
+            <Cursor width={7} height={15} style={{ marginLeft: 5 }} />
           </View>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} color={theme.text.secondary} /></IconButton>
+          <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
-              {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} color={theme.text.secondary} />}
+              {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
             </IconButton>
           ) : (
-            <IconButton label="Add item" onPress={openAdd}><Plus size={iconSize.sm} color={theme.text.secondary} /></IconButton>
+            <IconButton label="Add item" onPress={openAdd}><Plus size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
           )}
         </View>
       </View>
@@ -859,14 +948,37 @@ export default function Today({ user, onSignOut }) {
 
       {/* Floating slot cards — no outer wrapper; each card sits on the canvas. */}
       {homeSupps.length === 0 ? (
-        <View style={{ borderRadius: theme.radius.surface, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: theme.surface.card, alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
-          <Heading level={2} visual="display" font="heading" style={{ color: theme.text.secondary, marginBottom: spacing.md }}>◯</Heading>
-          <Text weight="semibold" style={{ marginBottom: spacing.xs }}>No items yet</Text>
-          <Heading level={2} visual="caption" font="heading" weight="medium" style={{ color: theme.text.secondary, marginBottom: spacing.lg, textAlign: 'center', lineHeight: 21 }}>Add your first to begin tracking.</Heading>
-          {!isPast ? <Button variant="primary" fullWidth onPress={openAdd}>Add an item to protocol</Button> : null}
+        <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: 'transparent', paddingVertical: spacing.xl, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
+          {!isPast && isDay1 && DAY1_TIP[scheduleMode] ? (
+            <View style={{ marginBottom: spacing.lg }}>
+              <InlineTip id={`day1-${scheduleMode}`} label={DAY1_TIP[scheduleMode].label}>{DAY1_TIP[scheduleMode].body}</InlineTip>
+            </View>
+          ) : null}
+          <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.md }}>// protocol — empty</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg }}>
+            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ no items yet</Text>
+            <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
+          </View>
+          {!isPast ? <Button variant="primary" fullWidth onPress={openAdd}>+ add item</Button> : null}
         </View>
       ) : (
-        <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>{cards}</View>
+        <View style={{ marginBottom: spacing.md }}>
+          {!isPast && !isFuture && !readOnly && hasMultiSuppSlot ? (
+            <View style={{ marginBottom: spacing.md }}>
+              <InlineTip id="take-all-hint" label="tip" cursor>tap the icon at the left of a slot to log every item in it at once</InlineTip>
+            </View>
+          ) : null}
+          {/* De-carded list with hairline rules between items — the break/hierarchy
+              the flat gap was missing, without re-introducing grey card fills. */}
+          {cards.map((c, i) => (
+            <View key={c.key ?? `card-${i}`}>
+              {c}
+              {i < cards.length - 1 ? (
+                <View style={{ height: theme.borderWidth.default, backgroundColor: theme.border.divider, marginVertical: spacing.sm }} />
+              ) : null}
+            </View>
+          ))}
+        </View>
       )}
       </Animated.View>
 
@@ -917,6 +1029,7 @@ export default function Today({ user, onSignOut }) {
           onTogglePauseSupp={togglePauseSupp}
           onResumeSupp={resumeSuppById}
           onDeleteSupp={deleteSuppById}
+          onSendProtocol={sendProtocolToUser}
         />
       ) : null}
     </SlideScreen>
@@ -929,6 +1042,10 @@ export default function Today({ user, onSignOut }) {
           onAddProtocol={addProtocol}
           onOpenDetail={setDetailProtocol}
           onBack={() => setShowLibrary(false)}
+          userId={user.id}
+          token={token()}
+          onActivateReceived={activateReceived}
+          onDeclineReceived={declineReceived}
         />
       ) : null}
     </SlideScreen>

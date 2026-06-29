@@ -3,11 +3,13 @@ import { View, ScrollView, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MoreHorizontal, Plus, Pause, Play, Trash2 } from 'lucide-react-native';
 import { isActiveSupp, isPausedSupp } from 'shared/lib/time';
-import { Heading, Text, Button, Badge } from '../components';
+import { Heading, Text, Button, Badge, Input, Cursor } from '../components';
 import CategoryIcon from '../components/CategoryIcon';
 import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
+import { useToast } from '../components/Toast';
+import { shareProtocolPdf } from '../lib/protocolPdf';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolDetailScreen.jsx — header
@@ -44,13 +46,16 @@ function SuppRow({ supp, onPress, isLast, right, multiline }) {
   );
 }
 
-function EmptyState({ title, body, onAdd }) {
+// Shell-voiced empty state — matches the home screen surface system.
+function EmptyState({ eyebrow, line, onAdd }) {
   return (
-    <View style={{ alignItems: 'center', paddingTop: spacing.xl, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
-      <Heading level={2} visual="display" font="heading" style={{ color: theme.text.secondary, marginBottom: spacing.md }}>◯</Heading>
-      <Text allowFontScaling maxFontSizeMultiplier={1.4} weight="semibold" style={{ marginBottom: spacing.xs, textAlign: 'center' }}>{title}</Text>
-      <Heading level={2} visual="caption" font="heading" weight="medium" style={{ color: theme.text.secondary, textAlign: 'center', lineHeight: 21, marginBottom: onAdd ? spacing.lg : 0 }}>{body}</Heading>
-      {onAdd ? <Button variant="primary" fullWidth onPress={onAdd}>Add supplement</Button> : null}
+    <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.xl, paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+      <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.md }}>{`// ${eyebrow}`}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: onAdd ? spacing.lg : 0 }}>
+        <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>{`$ ${line}`}</Text>
+        <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
+      </View>
+      {onAdd ? <Button variant="primary" fullWidth onPress={onAdd}>+ add item</Button> : null}
     </View>
   );
 }
@@ -58,7 +63,7 @@ function EmptyState({ title, body, onAdd }) {
 export default function ProtocolDetailScreen({
   protocol, supplements = [], activeProtocolNames = [], onBack,
   onUpdateProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
-  onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp,
+  onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp, onSendProtocol,
 }) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState('active');
@@ -68,6 +73,12 @@ export default function ProtocolDetailScreen({
   const [confirmAction, setConfirmAction] = useState(null); // 'archive' | 'delete'
   const [deletingSupp, setDeletingSupp] = useState(null);
   const [activateIntentOpen, setActivateIntentOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [sendEmail, setSendEmail] = useState('');
+  const [sendErr, setSendErr] = useState('');
+  const [sendingTo, setSendingTo] = useState(false);
+  const { show: showToast } = useToast();
 
   if (!protocol) return null;
   const isActive = protocol.status === 'active';
@@ -89,6 +100,34 @@ export default function ProtocolDetailScreen({
     setConfirmAction(null);
     if (action === 'archive') await onArchiveProtocol(protocol);
     if (action === 'delete') { await onDeleteProtocol(protocol); onBack(); }
+  };
+
+  // Build a PDF of this protocol and open the iOS share sheet (also covers
+  // "send" — AirDrop / Messages / Mail). Guarded so a build that predates the
+  // native expo-print module shows a toast instead of crashing.
+  const handleShare = async () => {
+    setMenuOpen(false);
+    if (sharing) return;
+    setSharing(true);
+    try {
+      await shareProtocolPdf(protocol, supplements);
+    } catch (e) {
+      showToast('couldn’t create pdf — try again', { tone: 'error' });
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  // Send this protocol to another Origin user by email. The recipient gets a
+  // pending "Received" card and chooses to add / replace / save it.
+  const doSend = async () => {
+    if (sendingTo) return;
+    setSendErr('');
+    setSendingTo(true);
+    const res = await onSendProtocol?.(protocol, sendEmail);
+    setSendingTo(false);
+    if (res?.ok) { setSendOpen(false); setSendEmail(''); }
+    else setSendErr(res?.error || "couldn't send");
   };
 
   const confirmDeleteSupp = async () => {
@@ -120,7 +159,7 @@ export default function ProtocolDetailScreen({
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <BorderedIconBtn label="Protocol actions" onPress={() => setMenuOpen(true)}><MoreHorizontal size={icon.sm} color={theme.text.secondary} /></BorderedIconBtn>
-          <BorderedIconBtn label="Add supplement" onPress={onAddSupp}><Plus size={icon.sm} color={theme.text.secondary} /></BorderedIconBtn>
+          <BorderedIconBtn label="add supplement" onPress={onAddSupp}><Plus size={icon.sm} color={theme.text.secondary} /></BorderedIconBtn>
         </View>
       </View>
 
@@ -152,7 +191,7 @@ export default function ProtocolDetailScreen({
 
             {tab === 'active' ? (
               activeSupps.length === 0 ? (
-                <EmptyState title="Add your first supplement" body="Pick a name, dose, and when in the day it goes. You can edit anything later." onAdd={onAddSupp} />
+                <EmptyState eyebrow="protocol — empty" line="add your first item" onAdd={onAddSupp} />
               ) : (
                 <View style={{ borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.subtle }}>
                   {activeSupps.map((supp, i) => (
@@ -192,37 +231,64 @@ export default function ProtocolDetailScreen({
       </ScrollView>
 
       {/* Overflow action sheet */}
-      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Protocol options">
+      <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="protocol options">
         <View style={{ gap: spacing.xs }}>
+          <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setSendErr(''); setSendEmail(''); setSendOpen(true); }}>send to a person</Button>
+          <Button variant="secondary" fullWidth onPress={handleShare}>share as PDF</Button>
           {isActive ? (
-            <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('archive'); }}>Save protocol</Button>
+            <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('archive'); }}>save protocol</Button>
           ) : (
-            <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); if (activeProtocolNames.length) setActivateIntentOpen(true); else onActivateProtocol(protocol, 'stack'); }}>Activate protocol</Button>
+            <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); if (activeProtocolNames.length) setActivateIntentOpen(true); else onActivateProtocol(protocol, 'stack'); }}>activate protocol</Button>
           )}
           {isArchived ? (
-            <Button variant="destructive" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('delete'); }}>Delete protocol</Button>
+            <Button variant="destructive" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('delete'); }}>delete protocol</Button>
           ) : null}
         </View>
+      </Modal>
+
+      {/* Send to another Origin user by email */}
+      <Modal
+        open={sendOpen}
+        onClose={() => (sendingTo ? null : setSendOpen(false))}
+        title="send protocol"
+        footer={
+          <Button variant="primary" fullWidth disabled={sendingTo || !sendEmail.trim()} onPress={doSend}>
+            {sendingTo ? 'sending…' : 'send'}
+          </Button>
+        }
+      >
+        <Text allowFontScaling maxFontSizeMultiplier={1.4} tone="secondary" style={{ marginBottom: spacing.sm, lineHeight: 21 }}>
+          {`Send "${protocol.name}" to another Origin user by email. They choose to add it on top, replace their current one, or save it.`}
+        </Text>
+        <Input
+          value={sendEmail}
+          onChangeText={(v) => { setSendEmail(v); setSendErr(''); }}
+          placeholder="their@email.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {sendErr ? <Text size="label" tone="danger" style={{ marginTop: spacing.xs }}>{sendErr}</Text> : null}
       </Modal>
 
       {/* Lifecycle confirm */}
       <Modal
         open={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        title={confirmAction === 'delete' ? 'Delete protocol?' : 'Save this protocol?'}
+        title={confirmAction === 'delete' ? 'delete protocol?' : 'save this protocol?'}
         footer={
           <View style={{ gap: spacing.xs }}>
             <Button variant={confirmAction === 'delete' ? 'destructive' : 'primary'} fullWidth onPress={handleConfirm}>
-              {confirmAction === 'delete' ? 'Delete' : 'Save protocol'}
+              {confirmAction === 'delete' ? 'delete' : 'save protocol'}
             </Button>
-            <Button variant="tertiary" fullWidth onPress={() => setConfirmAction(null)}>Cancel</Button>
+            <Button variant="tertiary" fullWidth onPress={() => setConfirmAction(null)}>cancel</Button>
           </View>
         }
       >
         <Text allowFontScaling maxFontSizeMultiplier={1.4} tone="secondary" style={{ lineHeight: 22 }}>
           {confirmAction === 'delete'
-            ? `This permanently deletes "${protocol.name}" and its supplements.`
-            : `Moves "${protocol.name}" to your Saved tab and stops tracking its supplements on the home screen.`}
+            ? `this permanently deletes "${protocol.name}" and its supplements`
+            : `moves "${protocol.name}" to your saved tab and stops tracking its supplements on the home screen`}
         </Text>
       </Modal>
 
@@ -234,7 +300,7 @@ export default function ProtocolDetailScreen({
         footer={
           <View style={{ gap: spacing.xs }}>
             <Button variant="destructive" fullWidth onPress={confirmDeleteSupp}>Delete</Button>
-            <Button variant="tertiary" fullWidth onPress={() => setDeletingSupp(null)}>Cancel</Button>
+            <Button variant="tertiary" fullWidth onPress={() => setDeletingSupp(null)}>cancel</Button>
           </View>
         }
       >

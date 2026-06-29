@@ -3,7 +3,7 @@ import { View, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dbSaveSchedule } from 'shared/lib/api';
 import { DEFAULT_CONFIG, DISPLAY_MODES, ANCHOR_SUB_MODES } from 'shared/config';
-import { Heading, Label, Text, Button } from '../components';
+import { Heading, Label, Text, Button, Cursor } from '../components';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { requestNotificationPermission } from '../lib/notifications';
@@ -53,7 +53,7 @@ export default function Onboarding({ user, onDone }) {
       if (resolvedMode === 'none') onDone(); // no times → skip the reminders prompt
       else setStep(2);
     } catch (e) {
-      setError("Couldn't save your schedule. Check your connection and try again.");
+      setError("couldn't save your schedule — check your connection and try again");
     } finally {
       setSaving(false);
     }
@@ -72,9 +72,12 @@ export default function Onboarding({ user, onDone }) {
           {step === 1 ? (
             <>
               <View style={{ alignItems: 'center', marginBottom: spacing.md }}><OriginGlyph size={48} /></View>
-              <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center', marginBottom: spacing.xs }}>Let's set you up</Heading>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
+                <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>let's set you up</Heading>
+                <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
+              </View>
               <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>
-                Pick how your day is scheduled. You can change this anytime in Settings.
+                pick how your day is scheduled. you can change this anytime in settings.
               </Text>
 
               {DISPLAY_MODES.map((m) => (
@@ -95,18 +98,21 @@ export default function Onboarding({ user, onDone }) {
               {error ? <Text size="label" tone="danger" style={{ marginTop: spacing.sm }}>{error}</Text> : null}
 
               <Button variant="primary" fullWidth onPress={saveAndContinue} disabled={!selected || saving} style={{ marginTop: spacing.lg }}>
-                {saving ? <InlineLoader size="sm" color={theme.text.onAccent} /> : 'Continue'}
+                {saving ? <InlineLoader size="sm" color={theme.text.onAccent} /> : 'continue'}
               </Button>
             </>
           ) : (
             <>
               <View style={{ alignItems: 'center', marginBottom: spacing.md }}><OriginGlyph size={48} /></View>
-              <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center', marginBottom: spacing.xs }}>Want reminders?</Heading>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
+                <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>want reminders?</Heading>
+                <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
+              </View>
               <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>
-                Get a notification at each scheduled time so you never miss a dose.
+                get a notification at each scheduled time so you never miss a dose.
               </Text>
-              <Button variant="primary" fullWidth onPress={enableReminders} style={{ marginBottom: spacing.sm }}>Enable reminders</Button>
-              <Button variant="tertiary" fullWidth onPress={onDone}>Not now</Button>
+              <Button variant="primary" fullWidth onPress={enableReminders} style={{ marginBottom: spacing.sm }}>enable reminders</Button>
+              <Button variant="tertiary" fullWidth onPress={onDone}>not now</Button>
             </>
           )}
         </View>

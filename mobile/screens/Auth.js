@@ -3,7 +3,7 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'rea
 import { Check } from 'lucide-react-native';
 // Reused verbatim from the web app via the `shared` alias.
 import { signInPassword, signUp, dbCreateProfile, requestPasswordReset } from 'shared/lib/api';
-import { Heading, Label, Text, Button, Input } from '../components';
+import { Heading, Label, Text, Button, Input, Cursor } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import OriginGlyph from '../components/OriginGlyph';
 import { theme, spacing, layout, icon, touch, letterSpacing as LS } from '../theme';
@@ -22,10 +22,10 @@ const PASSWORD_RULES = [
 ];
 
 const COPY = {
-  signin: { title: 'Welcome back', sub: 'Pick up where you left off' },
-  signup: { title: 'Hello', sub: "Let's set up your protocol" },
-  reset_request: { title: 'Reset password', sub: "We'll email you a link to set a new one" },
-  reset_sent: { title: 'Check your email', sub: 'If an account exists for that email, we sent a reset link. Open it on the web to choose a new password.' },
+  signin: { title: 'welcome back', sub: 'pick up where you left off' },
+  signup: { title: 'hello', sub: "let's set up your protocol" },
+  reset_request: { title: 'reset password', sub: "we'll email you a link to set a new one" },
+  reset_sent: { title: 'check your email', sub: 'if an account exists for that email, we sent a reset link. open it on the web to choose a new password.' },
 };
 
 function PasswordRule({ met, label }) {
@@ -85,17 +85,17 @@ export default function Auth({ onSignedIn }) {
       }
     } catch (e) {
       setError(
-        e.message === 'EMAIL_TAKEN' ? 'That email already has an account.' :
-        mode === 'signin' ? 'Email or password is incorrect.' :
-        mode === 'reset_request' ? "Couldn't send the reset link. Try again." :
-        'Something went wrong. Try again.'
+        e.message === 'EMAIL_TAKEN' ? 'that email already has an account' :
+        mode === 'signin' ? 'email or password is incorrect' :
+        mode === 'reset_request' ? "couldn't send the reset link" :
+        'something went wrong'
       );
     } finally {
       setBusy(false);
     }
   }
 
-  const submitLabel = mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link';
+  const submitLabel = mode === 'signin' ? 'sign in' : mode === 'signup' ? 'create account' : 'send reset link';
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.surface.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -109,15 +109,18 @@ export default function Auth({ onSignedIn }) {
             Origin
           </Heading>
 
-          <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center', marginBottom: spacing.xs }}>
-            {copy.title}
-          </Heading>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
+            <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>
+              {copy.title}
+            </Heading>
+            <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
+          </View>
           <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>
             {copy.sub}
           </Text>
 
           {mode === 'reset_sent' ? (
-            <Button variant="tertiary" fullWidth onPress={() => goTo('signin')}>Back to sign in</Button>
+            <Button variant="tertiary" fullWidth onPress={() => goTo('signin')}>back to sign in</Button>
           ) : (
             <>
               {mode === 'signup' ? (
@@ -153,16 +156,16 @@ export default function Auth({ onSignedIn }) {
 
               {mode === 'signin' ? (
                 <View style={{ marginTop: spacing.xs }}>
-                  <LinkBtn onPress={() => goTo('reset_request')}>Forgot password?</LinkBtn>
-                  <LinkBtn onPress={() => goTo('signup')}>Don't have an account? Sign up</LinkBtn>
+                  <LinkBtn onPress={() => goTo('reset_request')}>forgot password?</LinkBtn>
+                  <LinkBtn onPress={() => goTo('signup')}>don't have an account? sign up</LinkBtn>
                 </View>
               ) : mode === 'signup' ? (
                 <View style={{ marginTop: spacing.xs }}>
-                  <LinkBtn onPress={() => goTo('signin')}>Already have an account? Sign in</LinkBtn>
+                  <LinkBtn onPress={() => goTo('signin')}>already have an account? sign in</LinkBtn>
                 </View>
               ) : (
                 <View style={{ marginTop: spacing.xs }}>
-                  <LinkBtn onPress={() => goTo('signin')}>Back to sign in</LinkBtn>
+                  <LinkBtn onPress={() => goTo('signin')}>back to sign in</LinkBtn>
                 </View>
               )}
             </>
