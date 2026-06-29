@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseHHMM, fmtTime, addMins } from 'shared/lib/time';
 import { DEFAULT_CONFIG, ANCHOR_NOTES, MODES, DISPLAY_MODES, ANCHOR_SUB_MODES, deriveOffsets, computeIFSlotTimes } from 'shared/config';
 import { IF_SLOTS, SLOTS } from 'shared/lib/notifications';
-import { Label, SectionHeader, HelperText, Text, Button, Card, Input } from '../components';
+import { Label, SectionHeader, HelperText, Text, Button, Card, Stepper } from '../components';
 import PickerField from '../components/PickerField';
 import Modal from '../components/Modal';
 import { theme, spacing, typography, touch, layout, fonts } from '../theme';
@@ -109,17 +109,30 @@ function TimeRow({ label, value, placeholder = 'Set', onChange }) {
   );
 }
 
-// Card row with up to two number inputs (hr / min) and unit labels.
+// Count steppers (hr / min). Single field → label-left / stepper-right; dual
+// (hr · min) → label on top, two steppers below so the wider [−] n [+] controls
+// always fit the row.
 function NumberCard({ label, fields }) {
-  return (
-    <Card style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, marginBottom: 0 }}>
-      <Text tone="secondary" size="caption" style={{ flex: 1 }}>{label}</Text>
+  const dual = fields.length > 1;
+  const steppers = (
+    <View style={{ flexDirection: 'row', gap: spacing.sm }}>
       {fields.map((f, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Input variant="number" width={f.width ?? 52} value={f.value === 0 || f.value == null || f.value === '' ? '' : String(f.value)} placeholder="0" onChangeText={(v) => f.onChange(parseInt(v, 10) || 0)} />
-          {f.unit ? <Text tone="secondary" size="caption">{f.unit}</Text> : null}
-        </View>
+        <Stepper key={i} value={f.value} unit={f.unit} onChange={f.onChange} max={f.max ?? 999} />
       ))}
+    </View>
+  );
+  if (dual) {
+    return (
+      <Card style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: 0, gap: spacing.xs }}>
+        <Text tone="secondary" size="caption">{label}</Text>
+        {steppers}
+      </Card>
+    );
+  }
+  return (
+    <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: 0 }}>
+      <Text tone="secondary" size="caption" style={{ flex: 1 }}>{label}</Text>
+      {steppers}
     </Card>
   );
 }
