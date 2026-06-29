@@ -183,7 +183,7 @@ export default function ProtocolDetailScreen({
         ) : (
           <>
             <TabBar
-              tabs={[{ value: 'active', label: 'Active' }, { value: 'paused', label: 'Paused' }]}
+              tabs={[{ value: 'active', label: 'active' }, { value: 'paused', label: 'paused' }]}
               active={tab}
               onChange={setTab}
               style={{ marginBottom: spacing.lg }}

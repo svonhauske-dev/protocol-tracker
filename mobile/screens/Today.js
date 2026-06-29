@@ -767,7 +767,7 @@ export default function Today({ user, onSignOut }) {
     <Modal
       open={formOpen}
       onClose={closeForm}
-      title={editingId ? 'Edit item' : 'New item'}
+      title={editingId ? 'edit item' : 'new item'}
       footer={
         form ? (
           <>

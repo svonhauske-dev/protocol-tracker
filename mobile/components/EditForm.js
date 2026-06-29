@@ -20,9 +20,9 @@ import { theme, spacing, typography, touch, fonts } from '../theme';
 const CATEGORIES = ['Oral', 'Rx', 'Injectable', 'Topical'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TREATMENT_MODES = [
-  { value: 'indefinite', label: 'Indefinite' },
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'cycled', label: 'Cycled' },
+  { value: 'indefinite', label: 'indefinite' },
+  { value: 'scheduled', label: 'scheduled' },
+  { value: 'cycled', label: 'cycled' },
 ];
 const UNITS = ['days', 'weeks', 'months'];
 

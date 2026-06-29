@@ -99,7 +99,7 @@ function TimeRow({ label, value, placeholder = 'set', onChange }) {
           reads as a dropdown (open → accent border + flipped caret). */}
       <Pressable onPress={() => setOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', minHeight: touch.min }}>
         <Text tone="secondary" size="caption">{label}</Text>
-        <View style={{ flex: 1, height: 0, borderBottomWidth: 1, borderStyle: 'dotted', borderBottomColor: theme.border.subtle, marginHorizontal: spacing.sm }} />
+        <Text numberOfLines={1} ellipsizeMode="clip" style={{ flex: 1, color: theme.border.strong, fontFamily: fonts.mono.regular, fontSize: typography.label, marginHorizontal: spacing.sm }}>{'· '.repeat(40)}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: theme.borderWidth.default, borderColor: open ? theme.accent.default : theme.border.subtle, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm }}>
           <Text size="caption" style={{ color: value ? theme.text.primary : theme.text.tertiary, fontFamily: fonts.mono.regular, letterSpacing: 0.5 }}>{value || placeholder}</Text>
           <Text style={{ color: theme.text.secondary, fontFamily: fonts.mono.regular, fontSize: typography.caption }}>{open ? '▴' : '▾'}</Text>

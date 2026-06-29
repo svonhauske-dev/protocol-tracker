@@ -20,7 +20,8 @@ export default function ConfigRow({ ix, label, value, valueNode, onPress, grotes
       {grotesk
         ? <Heading level={3} visual="title" font="heading" weight="semibold" numberOfLines={1} style={{ flexShrink: 1 }}>{label}</Heading>
         : <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary, flexShrink: 1 }}>{label}</Text>}
-      <View style={{ flex: 1, height: 0, borderBottomWidth: 1, borderStyle: 'dotted', borderBottomColor: theme.border.subtle, marginHorizontal: spacing.sm, minWidth: spacing.md }} />
+      {/* Leader dots — a clipped run of middots (RN can't render dotted borders). */}
+      <Text numberOfLines={1} ellipsizeMode="clip" style={{ flex: 1, color: theme.border.strong, fontFamily: fonts.mono.regular, fontSize: typography.label, marginHorizontal: spacing.sm }}>{'· '.repeat(40)}</Text>
       {valueNode ? valueNode : (
         <>
           {value ? <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary, letterSpacing: 0.5, textTransform: 'uppercase', maxWidth: 150 }}>{value}</Text> : null}
