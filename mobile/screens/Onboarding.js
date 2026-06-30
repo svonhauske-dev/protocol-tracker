@@ -1,63 +1,70 @@
 import { useState } from 'react';
-import { View, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dbSaveSchedule } from 'shared/lib/api';
-import { DEFAULT_CONFIG, DISPLAY_MODES, ANCHOR_SUB_MODES } from 'shared/config';
-import { Heading, Label, Text, Button, Cursor } from '../components';
+import { DEFAULT_CONFIG } from 'shared/config';
+import { Heading, Text, Button, Cursor } from '../components';
 import OriginGlyph from '../components/OriginGlyph';
-import InlineLoader from '../components/InlineLoader';
+import ScheduleTab from './ScheduleTab';
 import { requestNotificationPermission } from '../lib/notifications';
 import { theme, spacing, layout } from '../theme';
 
-// First-run flow for new sign-ups: pick a schedule type → (reminders prompt) →
-// into the app. Lighter than the web's 596-line guided config — sensible
-// defaults are saved and the user refines in Settings → Schedule.
-function ModeCard({ title, desc, selected, onPress }) {
+// First-run wizard — builds the user's schedule using the SAME components as
+// Settings → Schedule (so it matches exactly), split into steps:
+//   1 · schedule type      (ScheduleTab showOnly='type')
+//   2 · fine-tune timing   (ScheduleTab showOnly='details' — same mounted instance)
+//   3 · reminders
+// 'none' (just a checklist) has no timing → skips straight to done after step 1.
+
+// Step progress — N short bars, filled up to the current step.
+function StepDots({ step, total }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        borderWidth: theme.borderWidth.default,
-        borderColor: selected ? theme.accent.default : theme.border.subtle,
-        backgroundColor: selected ? theme.accent.subtle : 'transparent',
-        borderRadius: theme.radius.surface,
-        padding: spacing.md,
-        marginBottom: spacing.xs,
-      }}
-    >
-      <Heading level={3} visual="title" font="heading" weight="semibold" style={{ color: selected ? theme.accent.onSubtle : theme.text.primary, marginBottom: spacing.xxxs }}>{title}</Heading>
-      {desc ? <Text size="caption" tone="secondary" style={{ lineHeight: 20 }}>{desc}</Text> : null}
-    </Pressable>
+    <View style={{ flexDirection: 'row', gap: spacing.xs, justifyContent: 'center', marginBottom: spacing.lg }}>
+      {Array.from({ length: total }, (_, i) => (
+        <View key={i} style={{ width: 28, height: 3, backgroundColor: i < step ? theme.text.primary : theme.border.subtle }} />
+      ))}
+    </View>
   );
 }
 
+function StepHeader({ title, sub }) {
+  return (
+    <>
+      <View style={{ alignItems: 'center', marginBottom: spacing.md }}><OriginGlyph size={44} /></View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
+        <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>{title}</Heading>
+        <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
+      </View>
+      <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>{sub}</Text>
+    </>
+  );
+}
+
+const HEADERS = {
+  1: { title: "let's set you up", sub: 'pick how your day is scheduled. you can change this anytime in settings.' },
+  2: { title: 'fine-tune timing', sub: 'set when each part of your day happens — the defaults are sensible, adjust what you like.' },
+  3: { title: 'want reminders?', sub: 'get a notification at each scheduled time so you never miss a dose.' },
+};
+
 export default function Onboarding({ user, onDone }) {
   const insets = useSafeAreaInsets();
-  const [step, setStep] = useState(1); // 1 = schedule type, 2 = reminders
-  const [selected, setSelected] = useState(null);
-  const [anchorSub, setAnchorSub] = useState('medication');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [step, setStep] = useState(1); // 1 type · 2 details · 3 reminders
+  const [mode, setMode] = useState('medication'); // tracked from ScheduleTab onSave
 
   const token = () => global.localStorage.getItem('sb_token');
-  const resolvedMode = selected === 'anchor' ? anchorSub : selected;
 
-  async function saveAndContinue() {
-    if (!selected || saving) return;
-    setSaving(true);
-    setError(null);
+  // ScheduleTab autosaves on every change (and on mount via saveOnMount); we
+  // persist it here and remember the chosen mode so step nav can branch on 'none'.
+  const saveSchedule = async (m, config, behavior, cTime, adaptiveVal) => {
+    setMode(m);
+    const offsets = m === 'fasting' ? { ...config } : { ...config, _anchor_behavior: behavior, _consistent_time: cTime };
     try {
-      const config = resolvedMode === 'none' ? {} : DEFAULT_CONFIG;
-      const offsets = resolvedMode === 'fasting' ? { ...config, _if_v2_migrated: true } : { ...config, _anchor_behavior: 'flexible', _consistent_time: '07:00' };
-      await dbSaveSchedule({ user_id: user.id, schedule_type: resolvedMode, offsets, adaptive_timing: false }, token());
-      if (resolvedMode === 'none') onDone(); // no times → skip the reminders prompt
-      else setStep(2);
-    } catch (e) {
-      setError("couldn't save your schedule — check your connection and try again");
-    } finally {
-      setSaving(false);
+      await dbSaveSchedule({ user_id: user.id, schedule_type: m, offsets, adaptive_timing: !!adaptiveVal }, token());
+      return true;
+    } catch {
+      return false;
     }
-  }
+  };
 
   async function enableReminders() {
     await requestNotificationPermission().catch(() => {});
@@ -67,50 +74,40 @@ export default function Onboarding({ user, onDone }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.surface.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingTop: Math.max(insets.top, 20) + spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, paddingTop: Math.max(insets.top, 20) + spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl, justifyContent: step === 3 ? 'center' : 'flex-start' }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={{ width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center' }}>
-          {step === 1 ? (
+          <StepDots step={step} total={3} />
+          <StepHeader title={HEADERS[step].title} sub={HEADERS[step].sub} />
+
+          {step <= 2 ? (
             <>
-              <View style={{ alignItems: 'center', marginBottom: spacing.md }}><OriginGlyph size={48} /></View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
-                <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>let's set you up</Heading>
-                <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
-              </View>
-              <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>
-                pick how your day is scheduled. you can change this anytime in settings.
-              </Text>
-
-              {DISPLAY_MODES.map((m) => (
-                <ModeCard key={m.id} title={m.title} desc={m.desc} selected={selected === m.id} onPress={() => setSelected(m.id)} />
-              ))}
-
-              {selected === 'anchor' ? (
-                <View style={{ marginTop: spacing.sm }}>
-                  <Label style={{ marginBottom: spacing.xs }}>Anchor type</Label>
-                  <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                    {ANCHOR_SUB_MODES.map((s) => (
-                      <Button key={s.id} variant="selector" active={anchorSub === s.id} style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto' }} onPress={() => setAnchorSub(s.id)}>{s.label}</Button>
-                    ))}
-                  </View>
+              {/* ONE ScheduleTab across steps 1–2 so its state persists; the step
+                  just toggles which sections render. */}
+              <ScheduleTab
+                scheduleMode="medication"
+                scheduleConfig={DEFAULT_CONFIG}
+                anchorBehavior="flexible"
+                consistentTime="07:00"
+                adaptive={false}
+                onSave={saveSchedule}
+                supplements={[]}
+                showOnly={step === 1 ? 'type' : 'details'}
+                saveOnMount
+              />
+              {step === 1 ? (
+                <Button variant="primary" fullWidth onPress={() => (mode === 'none' ? onDone() : setStep(2))} style={{ marginTop: spacing.lg }}>continue</Button>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg }}>
+                  <Button variant="secondary" style={{ flex: 1 }} onPress={() => setStep(1)}>back</Button>
+                  <Button variant="primary" style={{ flex: 1 }} onPress={() => setStep(3)}>continue</Button>
                 </View>
-              ) : null}
-
-              {error ? <Text size="label" tone="danger" style={{ marginTop: spacing.sm }}>{error}</Text> : null}
-
-              <Button variant="primary" fullWidth onPress={saveAndContinue} disabled={!selected || saving} style={{ marginTop: spacing.lg }}>
-                {saving ? <InlineLoader size="sm" color={theme.text.onAccent} /> : 'continue'}
-              </Button>
+              )}
             </>
           ) : (
             <>
-              <View style={{ alignItems: 'center', marginBottom: spacing.md }}><OriginGlyph size={48} /></View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs }}>
-                <Heading level={1} visual="display" weight="bold" font="heading" style={{ textAlign: 'center' }}>want reminders?</Heading>
-                <Cursor width={10} height={26} style={{ marginLeft: 6 }} />
-              </View>
-              <Text tone="secondary" size="caption" style={{ textAlign: 'center', marginBottom: spacing.xl, lineHeight: 21 }}>
-                get a notification at each scheduled time so you never miss a dose.
-              </Text>
               <Button variant="primary" fullWidth onPress={enableReminders} style={{ marginBottom: spacing.sm }}>enable reminders</Button>
               <Button variant="tertiary" fullWidth onPress={onDone}>not now</Button>
             </>

@@ -297,10 +297,10 @@ export default function ProtocolDetailScreen({
       <Modal
         open={!!deletingSupp}
         onClose={() => setDeletingSupp(null)}
-        title="Delete supplement?"
+        title="delete supplement?"
         footer={
           <View style={{ gap: spacing.xs }}>
-            <Button variant="destructive" fullWidth onPress={confirmDeleteSupp}>Delete</Button>
+            <Button variant="destructive" fullWidth onPress={confirmDeleteSupp}>delete</Button>
             <Button variant="tertiary" fullWidth onPress={() => setDeletingSupp(null)}>cancel</Button>
           </View>
         }

@@ -286,34 +286,34 @@ export default function SettingsScreen({
       <Modal
         open={showSignOutConfirm}
         onClose={() => setShowSignOutConfirm(false)}
-        title="Sign out of Origin?"
+        title="sign out?"
         footer={
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-            <Button variant="secondary" fullWidth onPress={() => setShowSignOutConfirm(false)}>Cancel</Button>
-            <Button variant="primary" fullWidth onPress={() => { setShowSignOutConfirm(false); onSignOut?.(); }}>Sign out</Button>
+            <Button variant="secondary" style={{ flex: 1 }} onPress={() => setShowSignOutConfirm(false)}>cancel</Button>
+            <Button variant="primary" style={{ flex: 1 }} onPress={() => { setShowSignOutConfirm(false); onSignOut?.(); }}>sign out</Button>
           </View>
         }
       >
-        <Text tone="secondary">You'll need to sign in again to access your protocol. Your data stays safe.</Text>
+        <Text tone="secondary">you'll need to sign in again to access your protocol. your data stays safe.</Text>
       </Modal>
 
       <Modal
         open={showDeleteConfirm}
         onClose={() => (deleting ? null : setShowDeleteConfirm(false))}
-        title="Delete your account?"
+        title="delete your account?"
         footer={
           <View style={{ gap: spacing.xs }}>
             {deleteErr ? <Text size="label" tone="danger" style={{ textAlign: 'center' }}>{deleteErr}</Text> : null}
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-              <Button variant="secondary" fullWidth disabled={deleting} onPress={() => setShowDeleteConfirm(false)}>Cancel</Button>
-              <Button variant="destructive" fullWidth disabled={deleting} onPress={handleDeleteAccount}>
-                {deleting ? <InlineLoader size="sm" /> : 'Delete'}
+              <Button variant="secondary" style={{ flex: 1 }} disabled={deleting} onPress={() => setShowDeleteConfirm(false)}>cancel</Button>
+              <Button variant="destructive" style={{ flex: 1 }} disabled={deleting} onPress={handleDeleteAccount}>
+                {deleting ? <InlineLoader size="sm" /> : 'delete'}
               </Button>
             </View>
           </View>
         }
       >
-        <Text tone="secondary">This permanently deletes your account, protocols, schedule, and history. It can't be undone.</Text>
+        <Text tone="secondary">this permanently deletes your account, protocols, schedule, and history. it can't be undone.</Text>
       </Modal>
     </View>
   );

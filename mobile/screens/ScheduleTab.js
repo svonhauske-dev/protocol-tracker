@@ -155,7 +155,11 @@ function ModeCard({ active, title, desc, onPress }) {
   );
 }
 
-export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, adaptive = false, onSave, supplements = [] }) {
+// `showOnly` lets the onboarding wizard render this in two steps from ONE mounted
+// instance: 'type' = just the schedule-type picker; 'details' = everything else.
+// `saveOnMount` persists the (possibly default) config immediately so a new user
+// who accepts the defaults still gets a schedule row created.
+export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavior, consistentTime, adaptive = false, onSave, supplements = [], showOnly, saveOnMount = false }) {
   const needsMigration = useRef(scheduleMode !== 'fixed' && scheduleConfig.first_meal_offset_hours === undefined);
   const fixedNeedsMigration = useRef(scheduleMode === 'fixed' && !scheduleConfig._fixed_premeal_migrated);
   const debounceRef = useRef(null);
@@ -187,6 +191,7 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
 
   useEffect(() => {
     if (needsMigration.current) { scheduleSave(localMode, localConfig, localBehavior, localTime, 0); needsMigration.current = false; }
+    else if (saveOnMount) { scheduleSave(localMode, localConfig, localBehavior, localTime, 0); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-time Fixed-mode migration: infer a global pre_meal_window from legacy
@@ -304,7 +309,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
     <View>
       {saveError ? <Text size="caption" tone="danger" style={{ marginBottom: spacing.md }}>{saveError}</Text> : null}
 
-      {/* Schedule type */}
+      {/* Schedule type (onboarding step 1 hides the rest via showOnly='type') */}
+      {showOnly !== 'details' ? (
       <View style={{ marginBottom: spacing.lg }}>
         <SectionHeader>Schedule type</SectionHeader>
         {localMode === 'none' ? <HelperText>add items without a time slot to use a simple checklist</HelperText> : null}
@@ -337,7 +343,11 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </View>
         ) : null}
       </View>
+      ) : null}
 
+      {/* Everything below = onboarding step 2 (showOnly='details' hides the type picker) */}
+      {showOnly !== 'type' ? (
+      <>
       {/* Daily timing */}
       {localMode !== 'fixed' && localMode !== 'none' && localMode !== 'fasting' ? (
         <View style={{ marginBottom: spacing.md }}>
@@ -483,6 +493,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
           </View>
         </View>
       ) : null}
+      </>
+      ) : null}
 
       <Modal
         open={orphanConfirm !== null}
@@ -490,8 +502,8 @@ export default function ScheduleTab({ scheduleMode, scheduleConfig, anchorBehavi
         title="supplements will be hidden"
         footer={
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-            <Button variant="tertiary" fullWidth onPress={() => setOrphanConfirm(null)}>cancel</Button>
-            <Button variant="primary" fullWidth onPress={() => { updateConfig('meal_count', orphanConfirm); setOrphanConfirm(null); }}>continue</Button>
+            <Button variant="tertiary" style={{ flex: 1 }} onPress={() => setOrphanConfirm(null)}>cancel</Button>
+            <Button variant="primary" style={{ flex: 1 }} onPress={() => { updateConfig('meal_count', orphanConfirm); setOrphanConfirm(null); }}>continue</Button>
           </View>
         }
       >
