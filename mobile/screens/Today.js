@@ -55,7 +55,6 @@ import SlotCard from '../components/SlotCard';
 import WeekStrip from '../components/WeekStrip';
 import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
-import Loader from '../components/Loader';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
