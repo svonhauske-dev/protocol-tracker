@@ -588,7 +588,7 @@ export default function Today({ user, onSignOut }) {
     // screen keeps reading supp.dose unchanged. The amount is also units-per-dose.
     const parseNum = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
     const doseAmount = parseNum(form.units_per_dose);
-    const doseForm = (form.stock_unit || '').trim();
+    const doseForm = form.stock_unit === '__OTHER__' ? '' : (form.stock_unit || '').trim();
     const composedDose = [form.units_per_dose?.trim?.() || '', doseForm].filter(Boolean).join(' ');
     const doseStr = composedDose || form.dose || '';
 

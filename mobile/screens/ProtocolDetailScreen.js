@@ -29,7 +29,7 @@ function BorderedIconBtn({ children, onPress, label }) {
 
 function SupplyLine({ supply }) {
   if (!supply) return null;
-  const color = supply.out ? theme.status.danger : supply.low ? theme.status.warning : theme.text.tertiary;
+  const color = supply.out ? theme.status.danger : supply.low ? theme.status.warning : theme.text.secondary;
   const unit = supply.remaining === 1 || supply.unit === 'mL' ? supply.unit : `${supply.unit}s`;
   const label = supply.out
     ? 'out — refill'

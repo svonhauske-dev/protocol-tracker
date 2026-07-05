@@ -26,35 +26,13 @@ const TREATMENT_MODES = [
 ];
 const UNITS = ['days', 'weeks', 'months'];
 
-// Countable dosage forms for the Dose picker. Singular; the unit flows into
-// supply ("90 pills in the bottle"). Strength (mg/mcg/IU) goes in Notes.
-const DOSE_FORMS = ['pill', 'tablet', 'capsule', 'softgel', 'caplet', 'troche', 'lozenge', 'gummy', 'drop', 'spray', 'mL', 'scoop', 'sachet', 'patch', 'injection', 'unit'];
+// Minimal common dosage forms, shown as chips (like Category/Treatment) — solids
+// + liquid + powder cover the overwhelming majority; "other" is a free-text
+// escape for the rest (troche, patch, injection…). Strength (mg/mcg) → Notes.
+const DOSE_FORMS = ['pill', 'capsule', 'tablet', 'softgel', 'mL', 'scoop'];
+const OTHER = '__OTHER__';
 
 const errStyle = { fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs };
-
-// Inline dropdown for the dose form: a bordered [ pill ▾ ] field that expands a
-// chip grid of DOSE_FORMS below it.
-function FormDropdown({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={{ flex: 1 }}>
-      <Pressable
-        onPress={() => setOpen((o) => !o)}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touch.min, borderWidth: open ? theme.borderWidth.accent : theme.borderWidth.default, borderColor: open ? theme.accent.default : theme.border.subtle, borderRadius: theme.radius.surface, paddingHorizontal: spacing.md }}
-      >
-        <Text style={{ color: value ? theme.text.primary : theme.text.tertiary, fontSize: typography.body, fontFamily: fonts.mono.regular }}>{value || 'form'}</Text>
-        <Text style={{ color: theme.text.secondary, fontFamily: fonts.mono.regular }}>{open ? '▴' : '▾'}</Text>
-      </Pressable>
-      {open ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs }}>
-          {DOSE_FORMS.map((fm) => (
-            <Button key={fm} variant="selector" active={value === fm} style={{ flexGrow: 0, flexShrink: 0, flexBasis: 'auto' }} onPress={() => { onChange(fm); setOpen(false); }}>{fm}</Button>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
 
 // Input-styled field that opens a picker on tap (native date/time).
 function FieldButton({ value, placeholder, onPress }) {
@@ -194,30 +172,44 @@ export default function EditForm({
         {nameTouched && !form.name?.trim() ? <Text style={errStyle}>name is required</Text> : null}
       </View>
 
-      {/* Dose — amount + form picker (e.g. "1 pill", "2 caps"). Strength like
-          "50 mcg" goes in Notes. The amount doubles as units-per-dose for supply. */}
+      {/* Dose — amount + form chips (matches Category/Treatment). "other" reveals
+          a free-text unit. Amount doubles as units-per-dose; strength → Notes. */}
+      {(() => {
+        const isOther = form.stock_unit === OTHER || (!!form.stock_unit && !DOSE_FORMS.includes(form.stock_unit));
+        return (
+          <View style={{ marginBottom: spacing.md }}>
+            <SectionHeader>Dose</SectionHeader>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm }}>
+              <Input width={72} keyboardType="numeric" value={form.units_per_dose} placeholder="1" onChangeText={(v) => setForm((f) => ({ ...f, units_per_dose: v.replace(/[^0-9.]/g, '') }))} />
+              <Text tone="tertiary" size="label">per dose</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              {DOSE_FORMS.map((fm) => (
+                <Button key={fm} variant="selector" active={form.stock_unit === fm} style={{ flexGrow: 0, flexShrink: 0, flexBasis: 'auto' }} onPress={() => setForm((f) => ({ ...f, stock_unit: fm }))}>{fm}</Button>
+              ))}
+              <Button variant="selector" active={isOther} style={{ flexGrow: 0, flexShrink: 0, flexBasis: 'auto' }} onPress={() => setForm((f) => ({ ...f, stock_unit: isOther ? '' : OTHER }))}>other</Button>
+            </View>
+            {isOther ? (
+              <Input value={form.stock_unit === OTHER ? '' : form.stock_unit} placeholder="e.g. troche" autoCapitalize="none" style={{ marginTop: spacing.xs }} onChangeText={(v) => setForm((f) => ({ ...f, stock_unit: v }))} />
+            ) : null}
+          </View>
+        );
+      })()}
+
+      {/* Supply — directly under Dose so the unit flows ("90 capsules in the
+          bottle"). Optional; "N left · ≈X days" derives from your check-off history. */}
       <View style={{ marginBottom: spacing.md }}>
-        <SectionHeader>Dose</SectionHeader>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Input width={72} keyboardType="numeric" value={form.units_per_dose} placeholder="1" onChangeText={(v) => setForm((f) => ({ ...f, units_per_dose: v.replace(/[^0-9.]/g, '') }))} />
-          <FormDropdown value={form.stock_unit} onChange={(fm) => setForm((f) => ({ ...f, stock_unit: fm }))} />
+        <SectionHeader>Supply</SectionHeader>
+        <HelperText>optional — how many in the bottle, to track refills</HelperText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Input width={100} keyboardType="numeric" value={form.stock_count} placeholder="e.g. 90" onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v.replace(/[^0-9.]/g, '') }))} />
+          <Text tone="tertiary" size="label">{form.stock_unit && form.stock_unit !== OTHER ? `${form.stock_unit}s in the bottle` : 'in the bottle'}</Text>
         </View>
       </View>
 
       <View style={{ marginBottom: spacing.md }}>
         <SectionHeader>Notes</SectionHeader>
         <Input value={form.notes} placeholder="e.g. 50 mcg · Thorne · with food" onChangeText={(v) => setForm((f) => ({ ...f, notes: v }))} />
-      </View>
-
-      {/* Supply — optional. Just "how many in the bottle" (in the dose's unit);
-          "N left · ≈X days" derives from your check-off history. */}
-      <View style={{ marginBottom: spacing.md }}>
-        <SectionHeader>Supply</SectionHeader>
-        <HelperText>optional — how many in the bottle, to track refills</HelperText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Input width={100} keyboardType="numeric" value={form.stock_count} placeholder="e.g. 90" onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v.replace(/[^0-9.]/g, '') }))} />
-          <Text tone="tertiary" size="label">{form.stock_unit ? `${form.stock_unit}s in the bottle` : 'in the bottle'}</Text>
-        </View>
       </View>
 
       <View style={{ marginBottom: spacing.md }}>
