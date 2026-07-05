@@ -915,6 +915,7 @@ export default function Today({ user, onSignOut }) {
         isReadOnly={readOnly}
         isFuture={isFuture}
         isPast={isPast}
+        supplyMap={supplyMap}
       />
     );
   };
@@ -970,6 +971,7 @@ export default function Today({ user, onSignOut }) {
         isReadOnly={readOnly}
         isFuture={isFuture}
         isPast={isPast}
+        supplyMap={supplyMap}
       />
     );
   }

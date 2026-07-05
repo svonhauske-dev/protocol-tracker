@@ -33,7 +33,7 @@ function StatusBadge({ kind, isReadOnly }) {
   return null;
 }
 
-function SuppRow({ slotId, supp, done, atTime, onToggle, onEdit, isReadOnly, isPast, status, openLogAt }) {
+function SuppRow({ slotId, supp, done, atTime, onToggle, onEdit, isReadOnly, isPast, status, openLogAt, supply }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: touch.row }}>
       <Pressable
@@ -72,6 +72,13 @@ function SuppRow({ slotId, supp, done, atTime, onToggle, onEdit, isReadOnly, isP
             </Pressable>
           ) : null}
         </View>
+        {/* Low-supply alert — only surfaces on home when it actually matters
+            (running low or out), so the take-now surface stays clean. */}
+        {supply && (supply.out || supply.low) ? (
+          <Text size="label" numberOfLines={1} style={{ marginTop: spacing.xxxs, color: supply.out ? theme.status.danger : theme.status.warning, fontFamily: fonts.mono.regular, letterSpacing: 0.3 }}>
+            {supply.out ? 'out — refill' : `≈${supply.daysLeft}d left — refill soon`}
+          </Text>
+        ) : null}
       </View>
       {!isReadOnly && !isPast && onEdit ? (
         <Pressable onPress={() => onEdit(supp)} hitSlop={14} accessibilityRole="button" accessibilityLabel={`Edit ${supp.name}`}>
@@ -98,6 +105,7 @@ export default function SlotCard({
   isFuture = false,
   isPast = false,
   single = false,
+  supplyMap,
 }) {
   const SC = statusColors();
   const sc = SC[status] || SC.future;
@@ -233,6 +241,7 @@ export default function SlotCard({
                 isPast={isPast}
                 status={status}
                 openLogAt={openLogAt}
+                supply={supplyMap?.[supp.id]}
               />
             );
           })}

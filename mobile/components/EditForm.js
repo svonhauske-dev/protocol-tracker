@@ -29,7 +29,7 @@ const UNITS = ['days', 'weeks', 'months'];
 // Minimal common dosage forms, shown as chips (like Category/Treatment) — solids
 // + liquid + powder cover the overwhelming majority; "other" is a free-text
 // escape for the rest (troche, patch, injection…). Strength (mg/mcg) → Notes.
-const DOSE_FORMS = ['pill', 'tablet', 'mL'];
+const DOSE_FORMS = ['pill', 'tablet', 'capsule', 'mL'];
 const OTHER = '__OTHER__';
 
 const errStyle = { fontSize: typography.label, color: theme.status.danger, marginTop: spacing.xxxs };
