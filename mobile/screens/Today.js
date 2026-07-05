@@ -50,6 +50,7 @@ import { getSlotTime, slotStatus } from '../lib/schedule';
 import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
 import { registerPushToken, unregisterPushToken } from '../lib/push';
+import { computeSupply, trackingSupply } from 'shared/lib/supply';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
 import { Heading, Text, Button, Cursor, InlineTip } from '../components';
@@ -122,6 +123,7 @@ export default function Today({ user, onSignOut }) {
   const [adaptiveEnabled, setAdaptiveEnabled] = useState(false);
   const [checked, setChecked] = useState({});
   const [pillTimes, setPillTimes] = useState({});
+  const [supplyLogs, setSupplyLogs] = useState([]); // historical logs [earliest fill .. yesterday] for supply math
   const [weekLogs, setWeekLogs] = useState([]);
   const [viewDate, setViewDate] = useState(TODAY);
   const [viewedWeekEnd, setViewedWeekEnd] = useState(TODAY);
@@ -444,6 +446,29 @@ export default function Today({ user, onSignOut }) {
   // slot AND gets a separate pinned card (checked in the 'anytime' namespace).
   const slottedPinnedSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return Array.isArray(sl) && sl.length > 0 && s.pinned_time && inDay(s); });
 
+  // ── Supply / refill ──────────────────────────────────────────────────────────
+  // "Remaining" derives from the check-off history: fetch the stable historical
+  // logs once (earliest fill → yesterday), then overlay today's in-memory checks
+  // so it updates live as you tick things off. supplyMap: suppId → snapshot.
+  const trackedSupps = supps.filter(trackingSupply);
+  useEffect(() => {
+    if (trackedSupps.length === 0) { setSupplyLogs([]); return; }
+    const earliest = trackedSupps.map((s) => s.stock_filled_on).filter(Boolean).sort()[0];
+    if (!earliest) { setSupplyLogs([]); return; }
+    const yesterday = dateKey(addDays(TODAY, -1));
+    if (earliest > yesterday) { setSupplyLogs([]); return; } // filled today only → today-in-memory covers it
+    dbGetDailyLogsRange(user.id, earliest, yesterday, token())
+      .then((rows) => setSupplyLogs(Array.isArray(rows) ? rows : []))
+      .catch(() => setSupplyLogs([]));
+  }, [trackedSupps.map((s) => `${s.id}:${s.stock_filled_on}`).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const todayKey = dateKey(TODAY);
+  const supplyMap = {};
+  if (trackedSupps.length > 0) {
+    const todayRow = { log_date: todayKey, checked: sliceForDay(checked, todayKey) };
+    for (const s of trackedSupps) supplyMap[s.id] = computeSupply(s, [...supplyLogs, todayRow], TODAY);
+  }
+
   let coreTotal = anytimeSupps.length + slottedPinnedSupps.length;
   let coreDone = 0;
   anytimeSupps.forEach((s) => { if (isChecked('anytime', s.id)) coreDone++; });
@@ -487,7 +512,17 @@ export default function Today({ user, onSignOut }) {
     name: '', dose: '', notes: '', slots: [], days: [], category: 'Oral', paused: false, status: 'active',
     protocol_id, treatment_mode: 'indefinite', starts_at: null, ends_at: null,
     cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null, pinned_time: null,
+    // dose = amount (units_per_dose) + form (stock_unit); supply = stock_count.
+    units_per_dose: '', stock_count: '', stock_unit: '',
   });
+
+  // Best-effort parse of a legacy free-text dose ("2 Caps", "1 pill") into
+  // amount + form so editing an old item pre-fills the new structured fields.
+  const DOSE_FORM_NORM = { cap: 'capsule', caps: 'capsule', capsule: 'capsule', capsules: 'capsule', pill: 'pill', pills: 'pill', tablet: 'tablet', tablets: 'tablet', tab: 'tablet', tabs: 'tablet', softgel: 'softgel', softgels: 'softgel', caplet: 'caplet', caplets: 'caplet', troche: 'troche', lozenge: 'lozenge', gummy: 'gummy', gummies: 'gummy', drop: 'drop', drops: 'drop', spray: 'spray', sprays: 'spray', ml: 'mL', scoop: 'scoop', scoops: 'scoop', sachet: 'sachet', patch: 'patch', patches: 'patch', injection: 'injection', injections: 'injection', unit: 'unit', units: 'unit' };
+  const parseDose = (dose) => {
+    const m = String(dose || '').match(/^\s*([0-9.]+)?\s*([a-zA-Z]+)?/);
+    return { amount: m?.[1] || '', form: DOSE_FORM_NORM[(m?.[2] || '').toLowerCase()] || '' };
+  };
 
   function openAdd() {
     const active = protocols.filter((p) => p.status === 'active');
@@ -506,6 +541,15 @@ export default function Today({ user, onSignOut }) {
       cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null,
       cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null,
       pinned_time: supp.pinned_time || null,
+      // dose amount + form: from the structured fields if present, else parse the
+      // legacy free-text dose. supply bottle count is separate + optional.
+      ...(() => {
+        const p = supp.units_per_dose != null ? { amount: String(supp.units_per_dose), form: supp.stock_unit || '' } : parseDose(supp.dose);
+        return { units_per_dose: p.amount, stock_unit: p.form };
+      })(),
+      stock_count: supp.stock_count != null ? String(supp.stock_count) : '',
+      _stock_filled_on: supp.stock_filled_on || null,
+      _low_supply_days: supp.low_supply_days ?? 7,
     });
     setSubmitError(null);
     setFormOpen(true);
@@ -539,6 +583,28 @@ export default function Today({ user, onSignOut }) {
       cycle_off_unit: txMode === 'cycled' ? form.cycle_off_unit || (form.cycle_off_value ? 'days' : null) : null,
     };
     const pinnedField = { pinned_time: form.pinned_time || null };
+
+    // Dose = amount + form (e.g. "1 pill"); compose the display string so every
+    // screen keeps reading supp.dose unchanged. The amount is also units-per-dose.
+    const parseNum = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
+    const doseAmount = parseNum(form.units_per_dose);
+    const doseForm = (form.stock_unit || '').trim();
+    const composedDose = [form.units_per_dose?.trim?.() || '', doseForm].filter(Boolean).join(' ');
+    const doseStr = composedDose || form.dose || '';
+
+    // Supply: bottle count is optional. Re-anchor stock_filled_on to today
+    // whenever the count changes (a refill); keep the prior anchor otherwise so
+    // "remaining" keeps counting from the real fill date.
+    const bottle = parseNum(form.stock_count);
+    const oldStock = editingId ? (supps.find((x) => x.id === editingId)?.stock_count ?? null) : null;
+    const supplyField = {
+      dose: doseStr,
+      units_per_dose: doseAmount,               // the dose amount (also supply basis)
+      stock_unit: doseForm || null,             // the dose/supply unit
+      stock_count: bottle,                      // optional — enables "N left"
+      low_supply_days: form._low_supply_days ?? 7,
+      stock_filled_on: bottle != null ? (bottle !== oldStock ? dateKey(TODAY) : (form._stock_filled_on || dateKey(TODAY))) : null,
+    };
     try {
       const t = token();
       if (editingId) {
@@ -552,12 +618,12 @@ export default function Today({ user, onSignOut }) {
         const histField = schedChanged
           ? { slot_history: withScheduleChange(oldSupp, form.slots, finalDays, dateKey(TODAY), oldSupp.created_at ? dateKey(new Date(oldSupp.created_at)) : '1970-01-01') }
           : {};
-        const updated = { ...form, days: finalDays, category: cat, id: editingId, ...txFields, ...pinnedField, ...histField };
+        const updated = { ...form, days: finalDays, category: cat, id: editingId, ...txFields, ...pinnedField, ...histField, ...supplyField };
         await dbUpdateSupp(updated, t);
         setSupps((s) => s.map((x) => (x.id === editingId ? { ...x, ...updated } : x)));
       } else {
         const rows = await dbAddSupp(
-          { name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id: form.protocol_id || null, ...txFields, ...pinnedField },
+          { name: form.name, dose: form.dose, notes: form.notes, slots: form.slots, days: finalDays, category: cat, paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id: form.protocol_id || null, ...txFields, ...pinnedField, ...supplyField },
           t
         );
         if (rows?.[0]) setSupps((s) => [...s, { ...rows[0], paused: rows[0].paused ?? false }]);
@@ -1052,6 +1118,7 @@ export default function Today({ user, onSignOut }) {
         <ProtocolDetailScreen
           protocol={detailProtocol}
           supplements={supps}
+          supplyMap={supplyMap}
           profile={profile}
           scheduleMode={scheduleMode}
           activeProtocolNames={protocols.filter((p) => p.status === 'active' && p.id !== detailProtocol.id).map((p) => p.name)}

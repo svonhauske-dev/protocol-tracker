@@ -27,7 +27,21 @@ function BorderedIconBtn({ children, onPress, label }) {
   return <IconButton onPress={onPress} accessibilityLabel={label}>{children}</IconButton>;
 }
 
-function SuppRow({ supp, onPress, isLast, right, multiline }) {
+function SupplyLine({ supply }) {
+  if (!supply) return null;
+  const color = supply.out ? theme.status.danger : supply.low ? theme.status.warning : theme.text.tertiary;
+  const unit = supply.remaining === 1 || supply.unit === 'mL' ? supply.unit : `${supply.unit}s`;
+  const label = supply.out
+    ? 'out — refill'
+    : `${supply.remaining} ${unit} left${supply.daysLeft != null ? ` · ≈${supply.daysLeft}d` : ''}`;
+  return (
+    <Text allowFontScaling maxFontSizeMultiplier={1.4} size="label" style={{ marginTop: spacing.xxxs, color, fontFamily: fonts.mono.regular, letterSpacing: 0.3 }}>
+      {label}
+    </Text>
+  );
+}
+
+function SuppRow({ supp, supply, onPress, isLast, right, multiline }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, minHeight: multiline ? touch.row : touch.min, borderBottomWidth: isLast ? 0 : theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
       <Pressable onPress={onPress} disabled={!onPress} style={{ flex: 1, minWidth: 0, paddingRight: spacing.sm }}>
@@ -41,6 +55,7 @@ function SuppRow({ supp, onPress, isLast, right, multiline }) {
             {supp.dose}{supp.notes ? ` · ${supp.notes}` : ''}
           </Text>
         ) : null}
+        <SupplyLine supply={supply} />
       </Pressable>
       {right}
     </View>
@@ -62,7 +77,7 @@ function EmptyState({ eyebrow, line, onAdd }) {
 }
 
 export default function ProtocolDetailScreen({
-  protocol, supplements = [], profile = null, scheduleMode = 'none', activeProtocolNames = [], onBack,
+  protocol, supplements = [], supplyMap = {}, profile = null, scheduleMode = 'none', activeProtocolNames = [], onBack,
   onUpdateProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp, onSendProtocol,
 }) {
@@ -173,6 +188,7 @@ export default function ProtocolDetailScreen({
                 <SuppRow
                   key={supp.id}
                   supp={supp}
+                  supply={supplyMap[supp.id]}
                   onPress={() => onEditSupp(supp)}
                   isLast={i === protocolSupps.length - 1}
                   right={<IconBtn label={`Delete ${supp.name}`} onPress={() => setDeletingSupp(supp)}><Trash2 size={icon.sm} color={theme.status.danger} /></IconBtn>}
@@ -198,6 +214,7 @@ export default function ProtocolDetailScreen({
                     <SuppRow
                       key={supp.id}
                       supp={supp}
+                      supply={supplyMap[supp.id]}
                       multiline
                       onPress={() => onEditSupp(supp)}
                       isLast={i === activeSupps.length - 1}
@@ -214,6 +231,7 @@ export default function ProtocolDetailScreen({
                   <SuppRow
                     key={supp.id}
                     supp={supp}
+                    supply={supplyMap[supp.id]}
                     multiline
                     isLast={i === pausedSupps.length - 1}
                     right={
