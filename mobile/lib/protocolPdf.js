@@ -174,16 +174,35 @@ function suppsFor(protocol, allSupps) {
   return (allSupps || []).filter((s) => s.protocol_id === protocol.id);
 }
 
-// Render the PDF to a file and open the iOS share sheet. The sheet shows a
-// preview of the document (tap it for a full-screen Quick Look) and the send
-// options — Messages / Mail / AirDrop / Save to Files. One action: preview → send.
-// Deliberately NOT Print.printAsync (that opens a print dialog).
+// The rendered document HTML — used both for the in-app WebView preview and for
+// the PDF file itself, so the preview matches the exported PDF exactly.
+export function protocolHtml(protocol, allSupps, profile, scheduleMode) {
+  return buildHtml(protocol, suppsFor(protocol, allSupps), profile, scheduleMode);
+}
+
+// Filesystem-safe filename from the protocol name → "Thyroid Protocol.pdf".
+const safeFileName = (name) => `${String(name || 'protocol').replace(/[\/\\:*?"<>|]/g, '-').trim().slice(0, 80) || 'protocol'}.pdf`;
+
+// Render the PDF, give it a human filename ("{Protocol}.pdf" — not a temp UUID),
+// and open the iOS share sheet to send it (Messages / Mail / AirDrop / Files).
 export async function shareProtocolPdf(protocol, allSupps, profile, scheduleMode) {
   const Print = await import('expo-print');
   const Sharing = await import('expo-sharing');
-  const { uri } = await Print.printToFileAsync({ html: buildHtml(protocol, suppsFor(protocol, allSupps), profile, scheduleMode) });
+  const { File, Paths } = await import('expo-file-system');
+  const { uri } = await Print.printToFileAsync({ html: protocolHtml(protocol, allSupps, profile, scheduleMode) });
+
+  // expo-print writes a random temp name; copy to a nicely-named file so the
+  // shared attachment reads "Thyroid Protocol.pdf".
+  let shareUri = uri;
+  try {
+    const named = new File(Paths.cache, safeFileName(protocol?.name));
+    try { if (named.exists) named.delete(); } catch {}
+    new File(uri).copy(named);
+    shareUri = named.uri;
+  } catch { /* fall back to the temp uri if the copy fails */ }
+
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Share ${protocol.name}`, UTI: 'com.adobe.pdf' });
+    await Sharing.shareAsync(shareUri, { mimeType: 'application/pdf', dialogTitle: `Share ${protocol?.name || 'protocol'}`, UTI: 'com.adobe.pdf' });
   }
-  return uri;
+  return shareUri;
 }
