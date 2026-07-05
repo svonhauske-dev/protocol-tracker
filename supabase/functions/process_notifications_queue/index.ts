@@ -31,6 +31,68 @@ const admin = createClient(supabaseUrl, serviceKey, {
   auth: { persistSession: false },
 });
 
+// ── Expo push (native iOS via APNs) ────────────────────────────────────────────
+// Deliver one queue row to a user's Expo push tokens. Returns how many sends
+// succeeded + whether a transient error means we should retry next tick. Dead
+// tokens (DeviceNotRegistered) are deleted so they don't loop forever.
+async function sendExpoPush(
+  tokens: string[],
+  row: any,
+): Promise<{ ok: number; retry: boolean }> {
+  const valid = tokens.filter((t) => typeof t === "string" && t.startsWith("ExponentPushToken"));
+  if (valid.length === 0) return { ok: 0, retry: false };
+
+  const messages = valid.map((to) => ({
+    to,
+    title: row.title,
+    body: row.body,
+    sound: "default",
+    priority: "high",
+    ttl: 3600,
+    data: { slot_id: row.slot_id, tag: row.tag },
+  }));
+
+  let res: Response;
+  try {
+    res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(messages),
+    });
+  } catch (err) {
+    console.error(`Expo push network error for user ${row.user_id}:`, err);
+    return { ok: 0, retry: true }; // network blip — retry next tick
+  }
+
+  if (!res.ok) {
+    console.error(`Expo push HTTP ${res.status} for user ${row.user_id}`);
+    return { ok: 0, retry: res.status >= 500 || res.status === 429 };
+  }
+
+  let ok = 0;
+  let retry = false;
+  try {
+    const payload = await res.json();
+    const tickets: any[] = payload?.data ?? [];
+    for (let i = 0; i < tickets.length; i++) {
+      const t = tickets[i];
+      if (t?.status === "ok") { ok++; continue; }
+      const errCode = t?.details?.error;
+      if (errCode === "DeviceNotRegistered") {
+        await admin.from("expo_push_tokens").delete().eq("token", valid[i]);
+        console.log(`Removed dead Expo token: ${valid[i].slice(0, 30)}…`);
+      } else {
+        console.error(`Expo push error (${errCode ?? "unknown"}) for user ${row.user_id}: ${t?.message ?? ""}`);
+        retry = true;
+      }
+    }
+  } catch (err) {
+    console.error("Expo push response parse failed:", err);
+    return { ok: 0, retry: true };
+  }
+  return { ok, retry };
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -76,7 +138,7 @@ Deno.serve(async (req: Request) => {
   ];
   const logDates = [...new Set<string>(rows.map((r) => r.scheduled_for_date).filter(Boolean))];
 
-  const [schedResult, subsResult, suppsResult, logsResult] = await Promise.all([
+  const [schedResult, subsResult, expoResult, suppsResult, logsResult] = await Promise.all([
     admin
       .from("user_schedule")
       .select("user_id, notifications_enabled, timezone")
@@ -84,6 +146,12 @@ Deno.serve(async (req: Request) => {
     admin
       .from("push_subscriptions")
       .select("user_id, endpoint, p256dh, auth")
+      .in("user_id", userIds),
+    // Native (Expo/APNs) push tokens — the iOS app can't receive Web Push, so
+    // it registers an ExponentPushToken here and we deliver via the Expo Push API.
+    admin
+      .from("expo_push_tokens")
+      .select("user_id, token")
       .in("user_id", userIds),
     // Supps needed to determine which are assigned to each (user, slot) so we
     // can check whether they're all already logged before firing the push.
@@ -117,6 +185,13 @@ Deno.serve(async (req: Request) => {
     const list = userSubs.get(sub.user_id) ?? [];
     list.push(sub);
     userSubs.set(sub.user_id, list);
+  }
+
+  const userExpoTokens = new Map<string, string[]>();
+  for (const t of expoResult.data ?? []) {
+    const list = userExpoTokens.get(t.user_id) ?? [];
+    list.push(t.token);
+    userExpoTokens.set(t.user_id, list);
   }
 
   const userSupps = new Map<string, any[]>();
@@ -184,8 +259,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const subs = userSubs.get(row.user_id) ?? [];
-    if (subs.length === 0) {
-      // No subscriptions — nothing to send, mark fired so it doesn't loop forever
+    const expoTokens = userExpoTokens.get(row.user_id) ?? [];
+    if (subs.length === 0 && expoTokens.length === 0) {
+      // No web subscriptions AND no native tokens — nothing to send, mark fired
+      // so it doesn't loop forever.
       await admin
         .from("notifications_queue")
         .update({ fired: true, fired_at: new Date().toISOString() })
@@ -204,6 +281,7 @@ Deno.serve(async (req: Request) => {
     let successCount  = 0;
     let retryableErr  = false;
 
+    // ── Web Push (browsers) ──
     for (const sub of subs) {
       try {
         await (webpush as any).sendNotification(
@@ -233,6 +311,13 @@ Deno.serve(async (req: Request) => {
           retryableErr = true;
         }
       }
+    }
+
+    // ── Native Push (iOS app via Expo → APNs) ──
+    if (expoTokens.length > 0) {
+      const expo = await sendExpoPush(expoTokens, row);
+      successCount += expo.ok;
+      if (expo.retry) retryableErr = true;
     }
 
     if (successCount > 0) {
