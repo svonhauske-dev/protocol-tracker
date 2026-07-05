@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Pressable, ScrollView, KeyboardAvoidingView, Platform, Animated, Easing, useWindowDimensions } from 'react-native';
+import { View, Pressable, ScrollView, KeyboardAvoidingView, Keyboard, Platform, Animated, Easing, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { PickerGroupContext } from './pickerGroup';
@@ -25,9 +25,22 @@ export default function Modal({ open, onClose, title, children, footer }) {
   // know how tall to be — measure the content and set the scroll area to
   // min(content, cap). The sheet then grows to fit and only scrolls past the cap.
   const [contentH, setContentH] = useState(0);
+  // Track the keyboard height so the sheet can shrink to stay ABOVE it. Without
+  // this, KeyboardAvoidingView lifts the whole sheet by the keyboard height and
+  // the top (first field) clips off-screen with no way to scroll up to it.
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s = Keyboard.addListener(showEvt, (e) => setKbHeight(e.endCoordinates?.height ?? 0));
+    const h = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => { s.remove(); h.remove(); };
+  }, []);
   // Cap the scroll area at the sheet's max (90%) minus the fixed chrome
-  // (handle + header + footer ≈ 190) so the footer is never pushed off-screen.
-  const scrollCap = winH * 0.9 - 220;
+  // (handle + header + footer ≈ 220). When the keyboard is up, cap instead at
+  // the space remaining ABOVE it so the whole sheet (which KAV lifts by the
+  // keyboard height) fits on-screen and the ScrollView can reach every field.
+  const scrollCap = Math.min(winH * 0.9, winH - kbHeight - insets.top - 8) - 220;
   // Bottom clearance for the home indicator + breathing room.
   const SAFE_BOTTOM = insets.bottom + spacing.sm;
 
