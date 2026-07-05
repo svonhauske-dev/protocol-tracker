@@ -174,14 +174,10 @@ function suppsFor(protocol, allSupps) {
   return (allSupps || []).filter((s) => s.protocol_id === protocol.id);
 }
 
-// Full-page preview (native print preview — shows the rendered PDF, with a
-// built-in share/save action). No extra native module, so no new EAS build.
-export async function previewProtocolPdf(protocol, allSupps, profile, scheduleMode) {
-  const Print = await import('expo-print');
-  await Print.printAsync({ html: buildHtml(protocol, suppsFor(protocol, allSupps), profile, scheduleMode) });
-}
-
-// Direct share to the OS share sheet (AirDrop / Messages / Mail / Files).
+// Render the PDF to a file and open the iOS share sheet. The sheet shows a
+// preview of the document (tap it for a full-screen Quick Look) and the send
+// options — Messages / Mail / AirDrop / Save to Files. One action: preview → send.
+// Deliberately NOT Print.printAsync (that opens a print dialog).
 export async function shareProtocolPdf(protocol, allSupps, profile, scheduleMode) {
   const Print = await import('expo-print');
   const Sharing = await import('expo-sharing');

@@ -9,7 +9,7 @@ import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import { useToast } from '../components/Toast';
-import { shareProtocolPdf, previewProtocolPdf } from '../lib/protocolPdf';
+import { shareProtocolPdf } from '../lib/protocolPdf';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolDetailScreen.jsx — header
@@ -102,21 +102,8 @@ export default function ProtocolDetailScreen({
     if (action === 'delete') { await onDeleteProtocol(protocol); onBack(); }
   };
 
-  // Preview the PDF full-page (native preview, with a built-in share action) —
-  // and a direct share to the OS share sheet. Both guarded so a build predating
-  // the native expo-print module shows a toast instead of crashing.
-  const handlePreview = async () => {
-    setMenuOpen(false);
-    if (sharing) return;
-    setSharing(true);
-    try {
-      await previewProtocolPdf(protocol, supplements, profile, scheduleMode);
-    } catch (e) {
-      showToast('couldn’t open preview — try again', { tone: 'error' });
-    } finally {
-      setSharing(false);
-    }
-  };
+  // Render the PDF and open the share sheet (preview → send). Guarded so a build
+  // predating the native expo-print module shows a toast instead of crashing.
   const handleShare = async () => {
     setMenuOpen(false);
     if (sharing) return;
@@ -246,8 +233,7 @@ export default function ProtocolDetailScreen({
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="protocol options">
         <View style={{ gap: spacing.xs }}>
           <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setSendErr(''); setSendEmail(''); setSendOpen(true); }}>send to a person</Button>
-          <Button variant="secondary" fullWidth onPress={handlePreview}>preview PDF</Button>
-          <Button variant="secondary" fullWidth onPress={handleShare}>share as PDF</Button>
+          <Button variant="secondary" fullWidth onPress={handleShare}>share PDF</Button>
           {isActive ? (
             <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('archive'); }}>save protocol</Button>
           ) : (
