@@ -25,6 +25,8 @@ import {
   dbNotifyProtocolSent,
   dbGetReceivedProtocols,
   dbUpdateProtocolSend,
+  dbUpdateScheduleField,
+  recomputeNotifications,
   supa,
 } from 'shared/lib/api';
 import {
@@ -46,7 +48,8 @@ import { DEFAULT_CONFIG, deriveOffsets, getSlotLabelForMode, makeCheckKey, compu
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
 import { getSlotTime, slotStatus } from '../lib/schedule';
 import { readCache, writeCache } from '../lib/cache';
-import { requestNotificationPermission, rescheduleSlotReminders, cancelAllReminders } from '../lib/notifications';
+import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
+import { registerPushToken, unregisterPushToken } from '../lib/push';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
 import { Heading, Text, Button, Cursor, InlineTip } from '../components';
@@ -397,28 +400,41 @@ export default function Today({ user, onSignOut }) {
       : SLOTS;
   const coreSlotIds = slotDefs.map((s) => s.id);
 
-  // Daily local-notification reminders — one per slot that has supps, at its
-  // computed time. Reschedules when the times change; disabled → cancel all.
-  const reminderSlots = remindersEnabled && isToday
-    ? slotDefs
-        .filter((sd) => getSuppsForSlot(sd.id).length > 0)
-        .map((sd) => { const t = getSlotTime(sd.id, ctx); if (!t) return null; const names = getSuppsForSlot(sd.id).map((s) => s.name).filter(Boolean); return { label: sd.label, time: `${t.getHours()}:${t.getMinutes()}`, names }; })
-        .filter(Boolean)
-    : [];
-  const reminderSig = JSON.stringify(reminderSlots);
+  // Reminders are SERVER-DRIVEN: recompute_notifications fills notifications_queue
+  // from the DB (real slot times + already-done state), and process_notifications_queue
+  // pushes to this device's Expo token via APNs — accurate daily even when the app
+  // is closed, and it skips slots you've already checked off. The old local
+  // daily-repeat scheduling is retired (it fired on un-started days + for done
+  // items); clear any leftover local schedules from older builds on boot.
+  useEffect(() => { cancelAllReminders(); }, []);
+
+  // Keep this device subscribed across sessions: if reminders were left on, make
+  // sure the Expo token is (re)registered and the queue is fresh on boot.
   useEffect(() => {
-    if (!remindersEnabled) { cancelAllReminders(); return; }
-    if (reminderSlots.length) rescheduleSlotReminders(reminderSlots);
-  }, [remindersEnabled, reminderSig]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (remindersEnabled && !loading) {
+      registerPushToken(user.id).then((tok) => { if (tok) recomputeNotifications().catch(() => {}); });
+    }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleReminders = async (next) => {
     if (next) {
       const ok = await requestNotificationPermission();
       if (!ok) { showToast('allow notifications in ios settings', { tone: 'warning' }); return; }
+      const tok = await registerPushToken(user.id);
+      global.localStorage.setItem('reminders_enabled', '1');
+      setRemindersEnabled(true);
+      // Turn the server flag on + fill the queue so pushes start flowing.
+      dbUpdateScheduleField('notifications_enabled', true, user.id, token()).catch(() => {});
+      recomputeNotifications().catch(() => {});
+      showToast(tok ? 'reminders on' : 'reminders on — enable on a real device to receive them', { tone: tok ? 'success' : 'warning' });
+    } else {
+      global.localStorage.setItem('reminders_enabled', '0');
+      setRemindersEnabled(false);
+      dbUpdateScheduleField('notifications_enabled', false, user.id, token()).catch(() => {});
+      unregisterPushToken().catch(() => {});
+      cancelAllReminders();
+      showToast('reminders off', { tone: 'success' });
     }
-    global.localStorage.setItem('reminders_enabled', next ? '1' : '0');
-    setRemindersEnabled(next);
-    showToast(next ? 'reminders on' : 'reminders off', { tone: 'success' });
   };
 
   const anytimeSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return (!Array.isArray(sl) || sl.length === 0) && inDay(s); });
@@ -1036,6 +1052,8 @@ export default function Today({ user, onSignOut }) {
         <ProtocolDetailScreen
           protocol={detailProtocol}
           supplements={supps}
+          profile={profile}
+          scheduleMode={scheduleMode}
           activeProtocolNames={protocols.filter((p) => p.status === 'active' && p.id !== detailProtocol.id).map((p) => p.name)}
           onBack={() => setDetailProtocol(null)}
           onUpdateProtocol={updateProtocol}

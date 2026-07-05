@@ -9,7 +9,7 @@ import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import { useToast } from '../components/Toast';
-import { shareProtocolPdf } from '../lib/protocolPdf';
+import { shareProtocolPdf, previewProtocolPdf } from '../lib/protocolPdf';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolDetailScreen.jsx — header
@@ -61,7 +61,7 @@ function EmptyState({ eyebrow, line, onAdd }) {
 }
 
 export default function ProtocolDetailScreen({
-  protocol, supplements = [], activeProtocolNames = [], onBack,
+  protocol, supplements = [], profile = null, scheduleMode = 'none', activeProtocolNames = [], onBack,
   onUpdateProtocol, onArchiveProtocol, onActivateProtocol, onDeleteProtocol,
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp, onSendProtocol,
 }) {
@@ -102,15 +102,27 @@ export default function ProtocolDetailScreen({
     if (action === 'delete') { await onDeleteProtocol(protocol); onBack(); }
   };
 
-  // Build a PDF of this protocol and open the iOS share sheet (also covers
-  // "send" — AirDrop / Messages / Mail). Guarded so a build that predates the
-  // native expo-print module shows a toast instead of crashing.
+  // Preview the PDF full-page (native preview, with a built-in share action) —
+  // and a direct share to the OS share sheet. Both guarded so a build predating
+  // the native expo-print module shows a toast instead of crashing.
+  const handlePreview = async () => {
+    setMenuOpen(false);
+    if (sharing) return;
+    setSharing(true);
+    try {
+      await previewProtocolPdf(protocol, supplements, profile, scheduleMode);
+    } catch (e) {
+      showToast('couldn’t open preview — try again', { tone: 'error' });
+    } finally {
+      setSharing(false);
+    }
+  };
   const handleShare = async () => {
     setMenuOpen(false);
     if (sharing) return;
     setSharing(true);
     try {
-      await shareProtocolPdf(protocol, supplements);
+      await shareProtocolPdf(protocol, supplements, profile, scheduleMode);
     } catch (e) {
       showToast('couldn’t create pdf — try again', { tone: 'error' });
     } finally {
@@ -234,6 +246,7 @@ export default function ProtocolDetailScreen({
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="protocol options">
         <View style={{ gap: spacing.xs }}>
           <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setSendErr(''); setSendEmail(''); setSendOpen(true); }}>send to a person</Button>
+          <Button variant="secondary" fullWidth onPress={handlePreview}>preview PDF</Button>
           <Button variant="secondary" fullWidth onPress={handleShare}>share as PDF</Button>
           {isActive ? (
             <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('archive'); }}>save protocol</Button>
