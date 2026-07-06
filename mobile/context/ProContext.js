@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import Paywall from '../components/Paywall';
+import { dbGetProfile } from 'shared/lib/api';
 import {
   configurePro, fetchProStatus, getOfferings, purchasePackage, restorePurchases,
   getDevPro, setDevPro,
@@ -24,8 +25,18 @@ export function ProProvider({ userId, children }) {
   const refresh = useCallback(async () => {
     const dev = getDevPro();
     const { isPro: rc, available } = await fetchProStatus();
-    setIsPro(dev || (available && rc));
-  }, []);
+    // Server-side grant: comped Pro (testers / promo redemption) sets
+    // user_profiles.pro_granted_at. Read it so a grant lights up Pro with no
+    // StoreKit purchase.
+    let granted = false;
+    if (userId) {
+      try {
+        const prof = await dbGetProfile(userId, global.localStorage.getItem('sb_token'));
+        granted = !!prof?.pro_granted_at;
+      } catch { /* offline — fall back to dev/RC */ }
+    }
+    setIsPro(dev || (available && rc) || granted);
+  }, [userId]);
 
   useEffect(() => {
     let alive = true;
