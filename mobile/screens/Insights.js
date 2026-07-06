@@ -25,14 +25,17 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
-      {/* Header — nav-title, no own hairline (the TabBar below is the separator). */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+      {/* Header — drill-in nav-title with hairline, identical to Protocols/Settings. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
         <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
         <Heading level={1} visual="body" font="body">Insights</Heading>
         <View style={{ width: 44 }} />
       </View>
 
-      <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      {/* Tabs — inset + lg gap under the header, matching ProtocolLibrary's active/saved. */}
+      <View style={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md }}>
+        <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      </View>
 
       {tab === 'adherence' ? (
         <Trends embedded supps={supps} activeSlotIds={activeSlotIds} slotDefs={slotDefs} userId={userId} token={token} />
