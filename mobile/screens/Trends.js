@@ -72,7 +72,7 @@ function AdherenceRow({ label, sub, pct }) {
   );
 }
 
-export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack }) {
+export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack, embedded = false }) {
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState(null);       // null = loading
   const [checkins, setCheckins] = useState([]);
@@ -151,12 +151,15 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
-      {/* Header — drill-in detail pattern (body nav-title, back, hairline). */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
-        <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
-        <Heading level={1} visual="body" font="body">Trends</Heading>
-        <View style={{ width: 44 }} />
-      </View>
+      {/* Header — drill-in detail pattern (body nav-title, back, hairline).
+          Skipped when embedded: the Insights container owns the header + tabs. */}
+      {!embedded ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
+          <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
+          <Heading level={1} visual="body" font="body">Trends</Heading>
+          <View style={{ width: 44 }} />
+        </View>
+      ) : null}
 
       {model == null ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

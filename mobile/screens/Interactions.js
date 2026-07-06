@@ -28,19 +28,21 @@ function InteractionCard({ item }) {
   );
 }
 
-export default function Interactions({ supps = [], onBack }) {
+export default function Interactions({ supps = [], onBack, embedded = false }) {
   const insets = useSafeAreaInsets();
   const items = useMemo(() => findInteractions(supps), [supps]);
   const conflicts = items.filter((i) => i.sameSlot).length;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
-      {/* Header — drill-in detail pattern. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
-        <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
-        <Heading level={1} visual="body" font="body">Interactions</Heading>
-        <View style={{ width: 44 }} />
-      </View>
+      {/* Header — drill-in detail pattern. Skipped when embedded (Insights owns it). */}
+      {!embedded ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
+          <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
+          <Heading level={1} visual="body" font="body">Interactions</Heading>
+          <View style={{ width: 44 }} />
+        </View>
+      ) : null}
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
         <HelperText>

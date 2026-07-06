@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Library, Plus, Pencil, Activity, Shield } from 'lucide-react-native';
+import { Library, Plus, Pencil, Activity } from 'lucide-react-native';
 import {
   dbGetProtocols,
   dbAddProtocol,
@@ -70,8 +70,7 @@ import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
 import SettingsScreen from './SettingsScreen';
 import ProtocolLibrary from './ProtocolLibrary';
-import Trends from './Trends';
-import Interactions from './Interactions';
+import Insights from './Insights';
 import ProtocolDetailScreen from './ProtocolDetailScreen';
 import SlideScreen from '../components/SlideScreen';
 import IconButton from '../components/IconButton';
@@ -139,8 +138,7 @@ export default function Today({ user, onSignOut }) {
   const [flashGreen, setFlashGreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
-  const [showTrends, setShowTrends] = useState(false);
-  const [showInteractions, setShowInteractions] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const [detailProtocol, setDetailProtocol] = useState(null);
   const [remindersEnabled, setRemindersEnabled] = useState(() => global.localStorage.getItem('reminders_enabled') === '1');
   const [logAtTarget, setLogAtTarget] = useState(null); // { sid, suppId } — "log at…" picker
@@ -1093,8 +1091,7 @@ export default function Today({ user, onSignOut }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
-          <IconButton label="Trends" onPress={() => setShowTrends(true)}><Activity size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
-          <IconButton label="Interactions" onPress={() => setShowInteractions(true)}><Shield size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
+          <IconButton label="Insights" onPress={() => setShowInsights(true)}><Activity size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
               {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
@@ -1285,22 +1282,17 @@ export default function Today({ user, onSignOut }) {
       ) : null}
     </SlideScreen>
 
-    <SlideScreen visible={showTrends}>
-      {showTrends ? (
-        <Trends
+    <SlideScreen visible={showInsights}>
+      {showInsights ? (
+        <Insights
           supps={supps}
           activeSlotIds={activeSlotIds}
           slotDefs={slotDefs}
           userId={user.id}
           token={token()}
-          onBack={() => setShowTrends(false)}
+          initialTab={hasTimingConflict ? 'timing' : 'adherence'}
+          onBack={() => setShowInsights(false)}
         />
-      ) : null}
-    </SlideScreen>
-
-    <SlideScreen visible={showInteractions}>
-      {showInteractions ? (
-        <Interactions supps={supps} onBack={() => setShowInteractions(false)} />
       ) : null}
     </SlideScreen>
 
