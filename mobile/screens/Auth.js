@@ -3,6 +3,7 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'rea
 import { Check } from 'lucide-react-native';
 // Reused verbatim from the web app via the `shared` alias.
 import { signInPassword, signUp, dbCreateProfile, requestPasswordReset } from 'shared/lib/api';
+import { identify, track } from '../lib/analytics';
 import { Heading, Label, Text, Button, Input, Cursor } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import OriginGlyph from '../components/OriginGlyph';
@@ -78,6 +79,8 @@ export default function Auth({ onSignedIn }) {
       } else if (mode === 'signup') {
         const { user, session } = await signUp(email.trim(), password);
         try { await dbCreateProfile({ id: user.id, display_name: name.trim() || null }, session.access_token); } catch {}
+        identify(user.id);
+        track('signup');
         onSignedIn(user, true); // new user → guided onboarding
       } else if (mode === 'reset_request') {
         await requestPasswordReset(email.trim(), RESET_REDIRECT);

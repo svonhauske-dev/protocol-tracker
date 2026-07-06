@@ -50,6 +50,7 @@ import { getSlotTime, slotStatus } from '../lib/schedule';
 import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
 import { registerPushToken, unregisterPushToken } from '../lib/push';
+import { track } from '../lib/analytics';
 import { computeSupply, trackingSupply, pluralizeUnit } from 'shared/lib/supply';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
@@ -326,6 +327,7 @@ export default function Today({ user, onSignOut }) {
     setChecked((c) => {
       const on = c[k] === true || (c[k] && typeof c[k] === 'object' && c[k].checked);
       if (on) { const { [k]: _omit, ...rest } = c; return rest; }
+      track('item_checked', { slot: sid });
       // Adaptive on → stamp the actual time so downstream slots can re-flow.
       return { ...c, [k]: adaptiveActive ? { checked: true, at: fmtTime(new Date()) } : true };
     });
@@ -425,6 +427,7 @@ export default function Today({ user, onSignOut }) {
       const tok = await registerPushToken(user.id);
       global.localStorage.setItem('reminders_enabled', '1');
       setRemindersEnabled(true);
+      track('reminders_enabled');
       // Turn the server flag on + fill the queue so pushes start flowing.
       dbUpdateScheduleField('notifications_enabled', true, user.id, token()).catch(() => {});
       recomputeNotifications().catch(() => {});
@@ -637,6 +640,7 @@ export default function Today({ user, onSignOut }) {
           t
         );
         if (rows?.[0]) setSupps((s) => [...s, { ...rows[0], paused: rows[0].paused ?? false }]);
+        track('item_added', { category: cat, hasSupply: bottle != null });
       }
       showToast(editingId ? `updated · ${form.name}` : `added · ${form.name}`, { tone: 'success' });
       closeForm();

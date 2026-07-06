@@ -30,6 +30,7 @@ import { getSession, signOut, dbGetSchedule } from 'shared/lib/api';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './theme';
 import { ToastProvider } from './components/Toast';
+import { identify, resetAnalytics } from './lib/analytics';
 import Auth from './screens/Auth';
 import Onboarding from './screens/Onboarding';
 import Today from './screens/Today';
@@ -62,6 +63,7 @@ export default function App() {
         const u = await getSession();
         if (alive && u) {
           setUser(u);
+          identify(u.id);
           // Re-show onboarding if a signed-in user has no schedule yet (e.g.
           // signed up but quit before finishing) — matches the web's gate.
           if (await needsSchedule(u)) { if (alive) setNeedsOnboarding(true); }
@@ -103,6 +105,7 @@ export default function App() {
               user={user}
               onSignOut={() => {
                 signOut();
+                resetAnalytics();
                 setUser(null);
                 setNeedsOnboarding(false);
               }}

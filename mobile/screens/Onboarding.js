@@ -7,6 +7,7 @@ import { Heading, Text, Button, Cursor } from '../components';
 import OriginGlyph from '../components/OriginGlyph';
 import ScheduleTab from './ScheduleTab';
 import { requestNotificationPermission } from '../lib/notifications';
+import { track } from '../lib/analytics';
 import { theme, spacing, layout } from '../theme';
 
 // First-run wizard — builds the user's schedule using the SAME components as
@@ -66,10 +67,13 @@ export default function Onboarding({ user, onDone }) {
     }
   };
 
+  // One completion path so onboarding_complete fires exactly once, with the mode.
+  const finish = () => { track('onboarding_complete', { mode }); onDone(); };
+
   async function enableReminders() {
     await requestNotificationPermission().catch(() => {});
     global.localStorage.setItem('reminders_enabled', '1');
-    onDone();
+    finish();
   }
 
   return (
@@ -98,7 +102,7 @@ export default function Onboarding({ user, onDone }) {
                 saveOnMount
               />
               {step === 1 ? (
-                <Button variant="primary" fullWidth onPress={() => (mode === 'none' ? onDone() : setStep(2))} style={{ marginTop: spacing.lg }}>continue</Button>
+                <Button variant="primary" fullWidth onPress={() => (mode === 'none' ? finish() : setStep(2))} style={{ marginTop: spacing.lg }}>continue</Button>
               ) : (
                 <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg }}>
                   <Button variant="secondary" style={{ flex: 1 }} onPress={() => setStep(1)}>back</Button>
@@ -109,7 +113,7 @@ export default function Onboarding({ user, onDone }) {
           ) : (
             <>
               <Button variant="primary" fullWidth onPress={enableReminders} style={{ marginBottom: spacing.sm }}>enable reminders</Button>
-              <Button variant="tertiary" fullWidth onPress={onDone}>not now</Button>
+              <Button variant="tertiary" fullWidth onPress={finish}>not now</Button>
             </>
           )}
         </View>
