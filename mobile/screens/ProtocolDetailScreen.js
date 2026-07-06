@@ -10,6 +10,7 @@ import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import { useToast } from '../components/Toast';
 import { shareProtocolPdf, protocolHtml } from '../lib/protocolPdf';
+import { pluralizeUnit } from 'shared/lib/supply';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
@@ -30,7 +31,7 @@ function BorderedIconBtn({ children, onPress, label }) {
 function SupplyLine({ supply }) {
   if (!supply) return null;
   const color = supply.out ? theme.status.danger : supply.low ? theme.status.warning : theme.text.secondary;
-  const unit = supply.remaining === 1 || supply.unit === 'mL' ? supply.unit : `${supply.unit}s`;
+  const unit = pluralizeUnit(supply.unit, supply.remaining);
   const label = supply.out
     ? 'out — refill'
     : `${supply.remaining} ${unit} left${supply.daysLeft != null ? ` · ≈${supply.daysLeft}d` : ''}`;

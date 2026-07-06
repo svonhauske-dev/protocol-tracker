@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { View, LogBox } from 'react-native';
+
+// Silence known-benign dev warnings so the debugger stays clean for real ones:
+// • expo-notifications push-token warning fires ONLY on the iOS Simulator (real
+//   devices mint a token silently) — it's expected in dev, gone in production.
+// • Legacy Architecture notice is informational; New Architecture migration is
+//   out of scope. Scoped substrings — real warnings still surface.
+LogBox.ignoreLogs([
+  'obtaining a push token',
+  'Legacy Architecture',
+]);
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 // Per-weight file imports (NOT the package root) so Metro bundles ONLY the six

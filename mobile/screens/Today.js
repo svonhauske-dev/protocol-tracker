@@ -50,7 +50,7 @@ import { getSlotTime, slotStatus } from '../lib/schedule';
 import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
 import { registerPushToken, unregisterPushToken } from '../lib/push';
-import { computeSupply, trackingSupply } from 'shared/lib/supply';
+import { computeSupply, trackingSupply, pluralizeUnit } from 'shared/lib/supply';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
 import { Heading, Text, Button, Cursor, InlineTip } from '../components';
@@ -595,9 +595,10 @@ export default function Today({ user, onSignOut }) {
     const parseNum = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
     const doseAmount = parseNum(form.units_per_dose);
     const doseForm = form.stock_unit === '__OTHER__' ? '' : (form.stock_unit || '').trim();
-    // Pluralize the form for display when the amount is >1 ("2 capsules"), except
-    // measure units like mL. The stored stock_unit stays singular (the chip value).
-    const displayForm = doseForm && doseAmount != null && doseAmount !== 1 && doseForm !== 'mL' ? `${doseForm}s` : doseForm;
+    // Pluralize the form for display when the amount is >1 ("2 capsules"); never
+    // double-pluralizes ("drops" stays "drops") and leaves mL alone. The stored
+    // stock_unit stays singular (the chip value).
+    const displayForm = pluralizeUnit(doseForm, doseAmount);
     const composedDose = [form.units_per_dose?.trim?.() || '', displayForm].filter(Boolean).join(' ');
     const doseStr = composedDose || form.dose || '';
 

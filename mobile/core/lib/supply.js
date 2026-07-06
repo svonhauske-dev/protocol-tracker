@@ -8,6 +8,15 @@ export function trackingSupply(supp) {
   return supp && supp.units_per_dose != null && supp.stock_count != null;
 }
 
+// Pluralize a dose/supply unit for display. Never double-pluralizes (a custom
+// "other" unit already ending in 's' like "drops" stays "drops"), and leaves
+// measures like mL alone. count == 1 (or null) → singular.
+export function pluralizeUnit(unit, count) {
+  const u = (unit || '').trim();
+  if (!u || count == null || count === 1 || u === 'mL' || u.endsWith('s')) return u;
+  return `${u}s`;
+}
+
 // Count how many doses of `supp` were logged (checked) on/after `sinceStr`
 // (YYYY-MM-DD), across the given daily_logs rows [{ log_date, checked }].
 // A dose = any truthy check key `${date}_${slot}_${suppId}` for this supp.
