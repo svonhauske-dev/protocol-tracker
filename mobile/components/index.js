@@ -5,6 +5,7 @@ export { default as SectionHeader } from './SectionHeader';
 export { default as Cursor } from './Cursor';
 export { default as Meter } from './Meter';
 export { default as InlineTip } from './InlineTip';
+export { default as Callout } from './Callout';
 export { default as Stepper } from './Stepper';
 export { default as ConfigRow } from './ConfigRow';
 export { default as OptionRow } from './OptionRow';

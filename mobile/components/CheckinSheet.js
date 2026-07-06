@@ -6,7 +6,7 @@ import Button from './Button';
 import Text from './Text';
 import SectionHeader from './SectionHeader';
 import HelperText from './HelperText';
-import { theme, spacing, typography, fonts, touch } from '../theme';
+import { theme, spacing } from '../theme';
 
 // A 1–5 rating as a row of sharp cells, filled up to the selected level (block
 // aesthetic, matching the Meter). Tapping a cell sets that level; tapping the
@@ -15,8 +15,8 @@ function RatingRow({ label, value, onChange }) {
   return (
     <View style={{ marginBottom: spacing.md }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-        <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary }}>{label}</Text>
-        <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{value ? `${value}/5` : '—'}</Text>
+        <Text>{label}</Text>
+        <Text size="label" tone="tertiary">{value ? `${value}/5` : '—'}</Text>
       </View>
       <View style={{ flexDirection: 'row', gap: spacing.xs }}>
         {[1, 2, 3, 4, 5].map((n) => {

@@ -14,6 +14,7 @@ import Button from './Button';
 import Badge from './Badge';
 import HelperText from './HelperText';
 import Text from './Text';
+import Callout from './Callout';
 import { theme, spacing, typography, touch, fonts } from '../theme';
 
 // RN port of src/components/EditForm.jsx. Text + selector fields are fully
@@ -340,18 +341,17 @@ export default function EditForm({
       {/* Timing guidance — surfaces absorption-timing conflicts with the rest of
           the regimen. Amber accent (a note, not an error). Never blocks save. */}
       {timingHits.length ? (
-        <View style={{ marginBottom: spacing.md, borderLeftWidth: 2, borderLeftColor: theme.status.warning, backgroundColor: theme.surface.cardSubtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}>
-          <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: spacing.xs }}>// timing note</Text>
+        <Callout tone="warning" label="timing note" style={{ marginBottom: spacing.md }}>
           {timingHits.map((h) => (
-            <Text key={h.key} style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption, color: theme.text.secondary, lineHeight: 21, marginBottom: spacing.xs }}>
+            <Text key={h.key} size="caption" tone="secondary" style={{ marginBottom: spacing.xs }}>
               {h.note}{' '}
               {h.sameSlot
                 ? `You have it in the same slot as ${h.otherNames.join(', ')} — consider moving one, ~${h.sep} apart.`
                 : `Keep ~${h.sep} between it and ${h.otherNames.join(', ')}.`}
             </Text>
           ))}
-          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption2, color: theme.text.tertiary, marginTop: spacing.xxs }}>{TIMING_DISCLAIMER}</Text>
-        </View>
+          <Text size="label" tone="secondary" style={{ marginTop: spacing.xxs }}>{TIMING_DISCLAIMER}</Text>
+        </Callout>
       ) : null}
 
       {/* Which days */}

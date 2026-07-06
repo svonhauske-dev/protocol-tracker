@@ -11,7 +11,7 @@ import {
 import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
 import { Heading, SectionHeader, Text, Meter, HelperText, InlineTip } from '../components';
 import IconButton from '../components/IconButton';
-import { theme, spacing, typography, fonts, icon, letterSpacing as LS } from '../theme';
+import { theme, spacing, typography, icon } from '../theme';
 
 const WINDOW = 30; // days
 
@@ -63,11 +63,11 @@ function AdherenceRow({ label, sub, pct }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.divider, gap: spacing.sm }}>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary }}>{label}</Text>
-        {sub ? <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginTop: 2 }}>{sub}</Text> : null}
+        <Text numberOfLines={1}>{label}</Text>
+        {sub ? <Text size="label" tone="tertiary" style={{ marginTop: 2 }}>{sub}</Text> : null}
       </View>
       <Meter pct={pct} cells={5} orientation="horizontal" cellW={14} cellH={6} gap={3} />
-      <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.body, color: theme.text.primary, width: 46, textAlign: 'right', fontVariant: ['tabular-nums'] }}>{pct}%</Text>
+      <Text weight="semibold" style={{ width: 46, textAlign: 'right', fontVariant: ['tabular-nums'] }}>{pct}%</Text>
     </View>
   );
 }
@@ -160,7 +160,7 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
 
       {model == null ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.regular }}>loading…</Text>
+          <Text tone="tertiary" size="label">loading…</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
@@ -169,13 +169,13 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>adherence · last {WINDOW} days</SectionHeader>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginBottom: spacing.md }}>
-              <Text style={{ fontFamily: fonts.mono.bold, fontSize: typography.readout, color: theme.text.primary, lineHeight: typography.readout, fontVariant: ['tabular-nums'] }}>{model.overall == null ? '—' : `${model.overall}%`}</Text>
-              <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.regular, marginBottom: 6 }}>doses taken{'\n'}on schedule</Text>
+              <Text weight="bold" size="readout" style={{ lineHeight: typography.readout, fontVariant: ['tabular-nums'] }}>{model.overall == null ? '—' : `${model.overall}%`}</Text>
+              <Text tone="secondary" size="caption" style={{ marginBottom: 6 }}>doses taken{'\n'}on schedule</Text>
             </View>
             <BarSeries values={model.dailyPcts.map((p) => p / 100)} green100 />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs }}>
-              <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.regular }}>{startLabel}</Text>
-              <Text tone="tertiary" size="label" style={{ fontFamily: fonts.mono.regular }}>{endLabel}</Text>
+              <Text tone="tertiary" size="label">{startLabel}</Text>
+              <Text tone="tertiary" size="label">{endLabel}</Text>
             </View>
           </View>
 
@@ -188,8 +188,8 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
               model.outcomes.map((o) => (
                 <View key={o.key} style={{ marginBottom: spacing.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                    <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.primary }}>{o.label}</Text>
-                    <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, fontVariant: ['tabular-nums'] }}>{o.avg == null ? '—' : `${o.avg.toFixed(1)} avg`}</Text>
+                    <Text>{o.label}</Text>
+                    <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{o.avg == null ? '—' : `${o.avg.toFixed(1)} avg`}</Text>
                   </View>
                   <BarSeries values={o.series} height={28} />
                 </View>
@@ -202,7 +202,7 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
             <View style={{ marginBottom: spacing.xl }}>
               <SectionHeader>by time of day</SectionHeader>
               {model.worstSlot && model.worstSlot.pct < 80 ? (
-                <InlineTip id="trends-worst-slot" label="pattern">you miss <Text style={{ fontFamily: fonts.mono.semibold }}>{model.worstSlot.label.toLowerCase()}</Text> most — {model.worstSlot.pct}% on schedule.</InlineTip>
+                <InlineTip id="trends-worst-slot" label="pattern">you miss <Text size="caption" weight="semibold">{model.worstSlot.label.toLowerCase()}</Text> most — {model.worstSlot.pct}% on schedule.</InlineTip>
               ) : null}
               <View style={{ marginTop: model.worstSlot && model.worstSlot.pct < 80 ? spacing.sm : 0 }}>
                 {model.slotRows.map((r) => <AdherenceRow key={r.id} label={r.label} sub={r.sub} pct={r.pct} />)}
