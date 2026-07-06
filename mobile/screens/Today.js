@@ -623,8 +623,18 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
       // dose amount + form: from the structured fields if present, else parse the
       // legacy free-text dose. supply bottle count is separate + optional.
       ...(() => {
-        const p = supp.units_per_dose != null ? { amount: String(supp.units_per_dose), form: supp.stock_unit || '' } : parseDose(supp.dose);
-        return { units_per_dose: p.amount, stock_unit: p.form };
+        const structured = supp.units_per_dose != null;
+        const p = structured ? { amount: String(supp.units_per_dose), form: supp.stock_unit || '' } : parseDose(supp.dose);
+        // Legacy free-text doses folded the strength after a "|" ("1 cápsula |
+        // 500mg …"). parseDose only reads amount+form, so that strength was being
+        // dropped on the structured re-save. Recover it into Notes so it survives.
+        const parts = String(supp.dose || '').split('|');
+        const legacyStrength = !structured && parts.length > 1 ? parts.slice(1).join('|').trim() : '';
+        const existing = (supp.notes || '').trim();
+        const notes = existing && legacyStrength && !existing.includes(legacyStrength)
+          ? `${existing} · ${legacyStrength}`
+          : (existing || legacyStrength);
+        return { units_per_dose: p.amount, stock_unit: p.form, notes };
       })(),
       stock_count: supp.stock_count != null ? String(supp.stock_count) : '',
       _stock_filled_on: supp.stock_filled_on || null,
