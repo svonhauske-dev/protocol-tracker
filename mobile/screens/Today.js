@@ -60,6 +60,7 @@ import SlotCard from '../components/SlotCard';
 import WeekStrip from '../components/WeekStrip';
 import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
+import BulkAddModal from '../components/BulkAddModal';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
@@ -142,6 +143,8 @@ export default function Today({ user, onSignOut }) {
   const [anchorEditDate, setAnchorEditDate] = useState(() => new Date());
   // Add/Edit supplement form
   const [formOpen, setFormOpen] = useState(false);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -651,6 +654,35 @@ export default function Today({ user, onSignOut }) {
     }
   }
 
+  // Bulk add — batch-create items with sensible defaults (anytime · every day ·
+  // Oral). The user refines each later in the normal edit form.
+  async function bulkAdd(names) {
+    if (bulkSubmitting || names.length === 0) return;
+    setBulkSubmitting(true);
+    try {
+      const t = token();
+      const active = protocols.filter((p) => p.status === 'active');
+      const protocol_id = active.length === 1 ? active[0].id : null;
+      const rows = await Promise.all(names.map((name) =>
+        dbAddSupp({
+          name, dose: '', notes: '', slots: [], days: [0, 1, 2, 3, 4, 5, 6], category: 'Oral',
+          paused: false, status: 'active', stopped_at: null, user_id: user.id, protocol_id,
+          treatment_mode: 'indefinite', starts_at: null, ends_at: null,
+          cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null, pinned_time: null,
+        }, t).then((r) => (Array.isArray(r) ? r[0] : r)).catch(() => null)
+      ));
+      const added = rows.filter(Boolean).map((r) => ({ ...r, paused: r.paused ?? false }));
+      if (added.length) setSupps((s) => [...s, ...added]);
+      track('items_bulk_added', { count: added.length });
+      setBulkAddOpen(false);
+      showToast(`added ${added.length} item${added.length === 1 ? '' : 's'}`, { tone: 'success' });
+    } catch (err) {
+      showToast("couldn't add — try again", { tone: 'error' });
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }
+
   async function deleteSupp() {
     if (!editingId) return;
     const name = form?.name;
@@ -878,16 +910,23 @@ export default function Today({ user, onSignOut }) {
       }
     >
       {form ? (
-        <EditForm
-          form={form}
-          setForm={setForm}
-          editingId={editingId}
-          scheduleMode={scheduleMode}
-          mealCount={mealCount}
-          eveningMode={scheduleConfig.evening_mode ?? null}
-          supplementHistory={supplementHistory}
-          activeProtocols={protocols.filter((p) => p.status === 'active')}
-        />
+        <>
+          {!editingId ? (
+            <Pressable onPress={() => { closeForm(); setTimeout(() => setBulkAddOpen(true), 260); }} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 24 }} style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.accent.default }}>+ add several at once ›</Text>
+            </Pressable>
+          ) : null}
+          <EditForm
+            form={form}
+            setForm={setForm}
+            editingId={editingId}
+            scheduleMode={scheduleMode}
+            mealCount={mealCount}
+            eveningMode={scheduleConfig.evening_mode ?? null}
+            supplementHistory={supplementHistory}
+            activeProtocols={protocols.filter((p) => p.status === 'active')}
+          />
+        </>
       ) : null}
     </Modal>
   );
@@ -1075,7 +1114,12 @@ export default function Today({ user, onSignOut }) {
             <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ no items yet</Text>
             <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
           </View>
-          {!isPast ? <Button variant="primary" fullWidth onPress={openAdd}>+ add item</Button> : null}
+          {!isPast ? (
+            <>
+              <Button variant="primary" fullWidth onPress={openAdd}>+ add item</Button>
+              <Button variant="tertiary" fullWidth onPress={() => setBulkAddOpen(true)} style={{ marginTop: spacing.xs }}>add several at once</Button>
+            </>
+          ) : null}
         </View>
       ) : (
         <View style={{ marginBottom: spacing.md }}>
@@ -1101,6 +1145,7 @@ export default function Today({ user, onSignOut }) {
     </ScrollView>
 
     {formModal}
+    <BulkAddModal open={bulkAddOpen} onClose={() => setBulkAddOpen(false)} onSubmit={bulkAdd} submitting={bulkSubmitting} />
 
     {/* "Log at…" — pick the actual time an item was taken */}
     <Modal
