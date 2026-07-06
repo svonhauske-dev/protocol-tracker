@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Library, Plus, Pencil, Activity } from 'lucide-react-native';
+import { Library, Plus, Pencil, Activity, Shield } from 'lucide-react-native';
 import {
   dbGetProtocols,
   dbAddProtocol,
@@ -48,6 +48,7 @@ import {
 } from 'shared/lib/time';
 import { DEFAULT_CONFIG, deriveOffsets, getSlotLabelForMode, makeCheckKey, computeAdaptiveDelta } from 'shared/config';
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
+import { findInteractions } from 'shared/lib/interactions';
 import { getSlotTime, slotStatus } from '../lib/schedule';
 import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
@@ -70,6 +71,7 @@ import { useToast } from '../components/Toast';
 import SettingsScreen from './SettingsScreen';
 import ProtocolLibrary from './ProtocolLibrary';
 import Trends from './Trends';
+import Interactions from './Interactions';
 import ProtocolDetailScreen from './ProtocolDetailScreen';
 import SlideScreen from '../components/SlideScreen';
 import IconButton from '../components/IconButton';
@@ -138,6 +140,7 @@ export default function Today({ user, onSignOut }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showTrends, setShowTrends] = useState(false);
+  const [showInteractions, setShowInteractions] = useState(false);
   const [detailProtocol, setDetailProtocol] = useState(null);
   const [remindersEnabled, setRemindersEnabled] = useState(() => global.localStorage.getItem('reminders_enabled') === '1');
   const [logAtTarget, setLogAtTarget] = useState(null); // { sid, suppId } — "log at…" picker
@@ -822,6 +825,8 @@ export default function Today({ user, onSignOut }) {
 
   // WeekStrip data
   const activeSlotIds = new Set(coreSlotIds);
+  // Same-slot timing conflict → amber the Interactions icon (proactive nudge).
+  const hasTimingConflict = useMemo(() => findInteractions(supps).some((i) => i.sameSlot), [supps]);
   const weekDates = getWeekDatesEndingAt(viewedWeekEnd);
   const logMap = {};
   weekLogs.forEach((l) => { logMap[l.log_date] = l; });
@@ -961,6 +966,7 @@ export default function Today({ user, onSignOut }) {
             eveningMode={scheduleConfig.evening_mode ?? null}
             supplementHistory={supplementHistory}
             activeProtocols={protocols.filter((p) => p.status === 'active')}
+            otherSupps={supps.filter((s) => s.id !== editingId)}
           />
         </>
       ) : null}
@@ -1088,6 +1094,7 @@ export default function Today({ user, onSignOut }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
           <IconButton label="Trends" onPress={() => setShowTrends(true)}><Activity size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
+          <IconButton label="Interactions" onPress={() => setShowInteractions(true)}><Shield size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
               {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
@@ -1288,6 +1295,12 @@ export default function Today({ user, onSignOut }) {
           token={token()}
           onBack={() => setShowTrends(false)}
         />
+      ) : null}
+    </SlideScreen>
+
+    <SlideScreen visible={showInteractions}>
+      {showInteractions ? (
+        <Interactions supps={supps} onBack={() => setShowInteractions(false)} />
       ) : null}
     </SlideScreen>
 

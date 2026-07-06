@@ -6,6 +6,7 @@ import SupplementNameAutocomplete from './SupplementNameAutocomplete';
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
 import { dateKey, fmtTime, isPausedSupp } from 'shared/lib/time';
 import { pluralizeUnit } from 'shared/lib/supply';
+import { checkCandidate, TIMING_DISCLAIMER } from 'shared/lib/interactions';
 import Label from './Label';
 import SectionHeader from './SectionHeader';
 import Input from './Input';
@@ -66,6 +67,7 @@ export default function EditForm({
   eveningMode = null,
   supplementHistory = [],
   activeProtocols = [],
+  otherSupps = [],
 }) {
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
@@ -135,6 +137,10 @@ export default function EditForm({
       return next;
     });
   };
+
+  // Timing guidance (NOT medical advice) — does this item conflict with anything
+  // already in the regimen? Recomputed live as name/slots change.
+  const timingHits = form.name && form.name.trim() ? checkCandidate(form.name, form.slots, otherSupps) : [];
 
   const mode = form.treatment_mode || 'indefinite';
   const dateOrderError = mode !== 'indefinite' && form.starts_at && form.ends_at && form.ends_at <= form.starts_at;
@@ -330,6 +336,23 @@ export default function EditForm({
           </View>
         ) : null}
       </View>
+
+      {/* Timing guidance — surfaces absorption-timing conflicts with the rest of
+          the regimen. Amber accent (a note, not an error). Never blocks save. */}
+      {timingHits.length ? (
+        <View style={{ marginBottom: spacing.md, borderLeftWidth: 2, borderLeftColor: theme.status.warning, backgroundColor: theme.surface.cardSubtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}>
+          <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: spacing.xs }}>// timing note</Text>
+          {timingHits.map((h) => (
+            <Text key={h.key} style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption, color: theme.text.secondary, lineHeight: 21, marginBottom: spacing.xs }}>
+              {h.note}{' '}
+              {h.sameSlot
+                ? `You have it in the same slot as ${h.otherNames.join(', ')} — consider moving one, ~${h.sep} apart.`
+                : `Keep ~${h.sep} between it and ${h.otherNames.join(', ')}.`}
+            </Text>
+          ))}
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.caption2, color: theme.text.tertiary, marginTop: spacing.xxs }}>{TIMING_DISCLAIMER}</Text>
+        </View>
+      ) : null}
 
       {/* Which days */}
       {mode !== 'cycled' ? (
