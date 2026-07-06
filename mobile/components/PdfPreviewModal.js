@@ -57,20 +57,24 @@ export default function PdfPreviewModal({ open, html, title, onShare, onClose, s
           </View>
         </View>
 
-        {/* Document */}
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-          <WebView
-            originWhitelist={['*']}
-            source={{ html }}
-            style={{ flex: 1, backgroundColor: '#ffffff' }}
-            showsVerticalScrollIndicator
-            onLoadEnd={() => setLoaded(true)}
-          />
-          {!loaded ? (
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}>
-              <ActivityIndicator color="#0d0d0d" />
-            </View>
-          ) : null}
+        {/* Document — framed like a page on a desk: the white paper floats on the
+            dark canvas with breathing room + a hairline edge, rather than an
+            abrupt edge-to-edge white slab inside the black app. */}
+        <View style={{ flex: 1, backgroundColor: theme.surface.canvas, paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: Math.max(insets.bottom, spacing.md) }}>
+          <View style={{ flex: 1, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, overflow: 'hidden' }}>
+            <WebView
+              originWhitelist={['*']}
+              source={{ html }}
+              style={{ flex: 1, backgroundColor: '#ffffff' }}
+              showsVerticalScrollIndicator
+              onLoadEnd={() => setLoaded(true)}
+            />
+            {!loaded ? (
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff' }}>
+                <ActivityIndicator color="#0d0d0d" />
+              </View>
+            ) : null}
+          </View>
         </View>
       </Animated.View>
     </View>
