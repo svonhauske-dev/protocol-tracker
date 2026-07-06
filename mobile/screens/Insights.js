@@ -38,7 +38,7 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
       </View>
 
       {tab === 'adherence' ? (
-        <Trends embedded supps={supps} activeSlotIds={activeSlotIds} slotDefs={slotDefs} userId={userId} token={token} />
+        <Trends embedded supps={supps} activeSlotIds={activeSlotIds} slotDefs={slotDefs} userId={userId} token={token} onClose={onBack} />
       ) : (
         <Interactions embedded supps={supps} />
       )}

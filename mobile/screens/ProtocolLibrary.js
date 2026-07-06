@@ -201,7 +201,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
             </View>
           )
         ) : archivedProtocols.length === 0 ? (
-          <EmptyState eyebrow="saved — empty" line="nothing saved yet" />
+          <EmptyState eyebrow="saved — empty" line="save a protocol from its ⋯ menu to reuse it later" />
         ) : (
           <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle }}>
             {archivedProtocols.map((p, i) => (

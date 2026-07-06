@@ -9,11 +9,12 @@ import {
   calculateSupplementAdherence,
 } from 'shared/lib/adherence';
 import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
-import { Heading, SectionHeader, Text, Meter, HelperText, InlineTip } from '../components';
+import { Heading, SectionHeader, Text, Meter, InlineTip, EmptyState } from '../components';
 import IconButton from '../components/IconButton';
 import { theme, spacing, typography, icon } from '../theme';
 
 const WINDOW = 30; // days
+const PREVIEW_BARS = Array.from({ length: WINDOW }, () => null); // faint empty-state track
 
 // Build [today-29 … today] as startOfDay dates.
 function lastNDates(n) {
@@ -72,7 +73,7 @@ function AdherenceRow({ label, sub, pct }) {
   );
 }
 
-export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack, embedded = false }) {
+export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack, onClose, embedded = false }) {
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState(null);       // null = loading
   const [checkins, setCheckins] = useState([]);
@@ -165,6 +166,17 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text tone="tertiary" size="label">loading…</Text>
         </View>
+      ) : model.overall == null ? (
+        // First-use / no regimen activity in-window — an authored empty state, not a lonely "—".
+        <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
+          <EmptyState
+            eyebrow="adherence — nothing to chart yet"
+            line="log a few days and your streak, patterns & outcomes fill in here"
+            action={onClose ? { label: 'go to today', onPress: onClose } : undefined}
+          >
+            <BarSeries values={PREVIEW_BARS} green100 />
+          </EmptyState>
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
 
@@ -185,19 +197,20 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
           {/* ── How you feel (outcomes) ── */}
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>how you feel · last {WINDOW} days</SectionHeader>
+            {/* Always show the three tracks — empty when unlogged, so the shape is
+                visible — with a one-line prompt above until check-ins accrue. */}
             {!model.hasOutcomes ? (
-              <HelperText style={{ marginBottom: 0 }}>check in daily and your energy, mood &amp; sleep trends plot here — against what you're taking.</HelperText>
-            ) : (
-              model.outcomes.map((o) => (
-                <View key={o.key} style={{ marginBottom: spacing.md }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                    <Text>{o.label}</Text>
-                    <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{o.avg == null ? '—' : `${o.avg.toFixed(1)} avg`}</Text>
-                  </View>
-                  <BarSeries values={o.series} height={28} />
+              <Text tone="secondary" size="caption" style={{ marginBottom: spacing.md }}>rate energy, mood &amp; sleep from your home screen — they plot against what you're taking.</Text>
+            ) : null}
+            {model.outcomes.map((o) => (
+              <View key={o.key} style={{ marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                  <Text>{o.label}</Text>
+                  <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{o.avg == null ? '—' : `${o.avg.toFixed(1)} avg`}</Text>
                 </View>
-              ))
-            )}
+                <BarSeries values={o.series} height={28} />
+              </View>
+            ))}
           </View>
 
           {/* ── By time of day ── */}

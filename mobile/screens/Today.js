@@ -57,7 +57,7 @@ import { track } from '../lib/analytics';
 import { computeSupply, trackingSupply, pluralizeUnit } from 'shared/lib/supply';
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
-import { Heading, Text, Button, Cursor, InlineTip } from '../components';
+import { Heading, Text, Button, Cursor, InlineTip, Callout } from '../components';
 import Hero from '../components/Hero';
 import SlotCard from '../components/SlotCard';
 import WeekStrip from '../components/WeekStrip';
@@ -139,6 +139,8 @@ export default function Today({ user, onSignOut }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [loadError, setLoadError] = useState(false);        // last data load failed
+  const [offlineDismissed, setOfflineDismissed] = useState(false);
   const [detailProtocol, setDetailProtocol] = useState(null);
   const [remindersEnabled, setRemindersEnabled] = useState(() => global.localStorage.getItem('reminders_enabled') === '1');
   const [logAtTarget, setLogAtTarget] = useState(null); // { sid, suppId } — "log at…" picker
@@ -251,12 +253,17 @@ export default function Today({ user, onSignOut }) {
       const snapshot = { protos, supps: s, sched, prof, rows };
       applyStatic(snapshot);
       writeCache(user.id, snapshot);
+      setLoadError(false);
     } catch (e) {
-      // Offline / fetch failed — keep whatever the cache hydrated (or defaults).
+      // Offline / fetch failed — keep whatever the cache hydrated (or defaults),
+      // but surface a banner so the degraded state is labeled, not silent.
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
   }
+
+  const retryLoad = () => { setOfflineDismissed(false); loadStatic(); };
 
   useEffect(() => { loadStatic(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1116,6 +1123,23 @@ export default function Today({ user, onSignOut }) {
         rangeLabel={rangeLabel}
       />
 
+      {/* Offline / load-error banner — labels the degraded state instead of
+          silently showing cache (or an empty-looking account). Dismissible; retry
+          re-runs the load. */}
+      {loadError && !offlineDismissed ? (
+        <Callout tone="warning" label={supps.length ? 'offline' : 'connection'} style={{ marginBottom: spacing.md }}>
+          <Text tone="secondary" size="caption" style={{ marginBottom: spacing.xs }}>
+            {supps.length
+              ? 'showing your last saved day — changes may not be synced yet.'
+              : "couldn't reach the server. check your connection."}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: spacing.lg }}>
+            <Pressable onPress={retryLoad} hitSlop={8} accessibilityRole="button" accessibilityLabel="Retry"><Text size="label" style={{ color: theme.accent.default }}>retry ›</Text></Pressable>
+            <Pressable onPress={() => setOfflineDismissed(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Dismiss"><Text size="label" tone="tertiary">dismiss</Text></Pressable>
+          </View>
+        </Callout>
+      ) : null}
+
       <Animated.View style={{ opacity: dayFade }}>
       <Hero
         scheduleMode={scheduleMode}
@@ -1190,6 +1214,13 @@ export default function Today({ user, onSignOut }) {
         </View>
       ) : (
         <View style={{ marginBottom: spacing.md }}>
+          {/* One-time nudge the first time a same-slot timing conflict exists —
+              explains why the Insights icon went amber (otherwise cryptic). */}
+          {hasTimingConflict && !isPast && !isFuture && !readOnly ? (
+            <View style={{ marginBottom: spacing.md }}>
+              <InlineTip id="timing-conflict" label="timing">two of your items compete for absorption at the same time — see insights › timing.</InlineTip>
+            </View>
+          ) : null}
           {!isPast && !isFuture && !readOnly && hasMultiSuppSlot ? (
             <View style={{ marginBottom: spacing.md }}>
               <InlineTip id="take-all-hint" label="tip" cursor>tap the icon at the left of a slot to log every item in it at once</InlineTip>
