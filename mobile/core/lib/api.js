@@ -225,6 +225,11 @@ export const dbDeleteSupp   = (id, t)   => supa("PATCH",  `/rest/v1/supplements?
 export const dbHardDeleteSupp = (id, t) => supa("DELETE", `/rest/v1/supplements?id=eq.${id}`, null, t);
 export const dbGetLog       = (userId, date, t) => supa("GET",    `/rest/v1/daily_logs?user_id=eq.${userId}&select=*&log_date=eq.${date}`, null, t).then(r => r?.[0] || null);
 export const dbUpsertLog    = (log, t)  => supa("POST",   "/rest/v1/daily_logs?on_conflict=user_id,log_date", log, t);
+
+// Daily outcomes check-in (Phase 2). One row per (user, day), upserted.
+export const dbGetCheckin        = (userId, date, t) => supa("GET", `/rest/v1/daily_checkins?user_id=eq.${userId}&log_date=eq.${date}&select=*`, null, t);
+export const dbUpsertCheckin     = (row, t)          => supa("POST", "/rest/v1/daily_checkins?on_conflict=user_id,log_date", row, t);
+export const dbGetCheckinsRange  = (userId, start, end, t) => supa("GET", `/rest/v1/daily_checkins?user_id=eq.${userId}&log_date=gte.${start}&log_date=lte.${end}&select=*&order=log_date.asc`, null, t);
 // user_schedule needs an explicit user_id filter on the read — without it
 // PostgREST returns rows for every user (row-level security isn't blocking
 // the SELECT), and `[0]` then returns a random other user's schedule.

@@ -27,6 +27,8 @@ import {
   dbUpdateProtocolSend,
   dbUpdateScheduleField,
   recomputeNotifications,
+  dbGetCheckin,
+  dbUpsertCheckin,
   supa,
 } from 'shared/lib/api';
 import {
@@ -61,6 +63,7 @@ import WeekStrip from '../components/WeekStrip';
 import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
 import BulkAddModal from '../components/BulkAddModal';
+import CheckinSheet from '../components/CheckinSheet';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
@@ -145,6 +148,9 @@ export default function Today({ user, onSignOut }) {
   const [formOpen, setFormOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [checkinByDate, setCheckinByDate] = useState({}); // dk → checkin row (or null once fetched)
+  const [checkinOpen, setCheckinOpen] = useState(false);
+  const [checkinSaving, setCheckinSaving] = useState(false);
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -480,6 +486,34 @@ export default function Today({ user, onSignOut }) {
     for (const s of tracked) m[s.id] = computeSupply(s, merged, TODAY);
     return m;
   }, [supps, supplyLogs, checked, todayKey]);
+
+  // ── Daily outcomes check-in ──────────────────────────────────────────────────
+  // Fetch the viewed day's check-in on demand (undefined = not fetched, null =
+  // fetched-and-none, object = the row). Cached in checkinByDate.
+  const dayCheckin = checkinByDate[dk];
+  useEffect(() => {
+    if (dayCheckin !== undefined) return; // already fetched
+    dbGetCheckin(user.id, dk, token())
+      .then((rows) => setCheckinByDate((m) => ({ ...m, [dk]: (Array.isArray(rows) ? rows[0] : rows) || null })))
+      .catch(() => setCheckinByDate((m) => ({ ...m, [dk]: null })));
+  }, [dk]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveCheckin(values) {
+    if (checkinSaving) return;
+    setCheckinSaving(true);
+    try {
+      const rows = await dbUpsertCheckin({ user_id: user.id, log_date: dk, ...values }, token());
+      const saved = (Array.isArray(rows) ? rows[0] : rows) || { user_id: user.id, log_date: dk, ...values };
+      setCheckinByDate((m) => ({ ...m, [dk]: saved }));
+      track('checkin_logged', { energy: values.energy, mood: values.mood, sleep: values.sleep, hasNote: !!values.note });
+      setCheckinOpen(false);
+      showToast('checked in', { tone: 'success' });
+    } catch (err) {
+      showToast("couldn't save — try again", { tone: 'error' });
+    } finally {
+      setCheckinSaving(false);
+    }
+  }
 
   let coreTotal = anytimeSupps.length + slottedPinnedSupps.length;
   let coreDone = 0;
@@ -1101,6 +1135,32 @@ export default function Today({ user, onSignOut }) {
         onEditAnchor={onEditAnchor}
       />
 
+      {/* Daily outcomes check-in — the retention loop. Prompt when not done,
+          summary when done. Hidden on future days. */}
+      {!isFuture ? (
+        <Pressable
+          onPress={() => setCheckinOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Daily check-in"
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.md, paddingHorizontal: spacing.md, marginBottom: spacing.md }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.xxs }}>// how you feel</Text>
+            {dayCheckin ? (
+              <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>
+                {`energy ${dayCheckin.energy ?? '—'} · mood ${dayCheckin.mood ?? '—'} · sleep ${dayCheckin.sleep ?? '—'}${dayCheckin.note ? ' · note' : ''}`}
+              </Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ how do you feel today?</Text>
+                <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
+              </View>
+            )}
+          </View>
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginLeft: spacing.sm }}>{dayCheckin ? 'edit' : 'check in'} ›</Text>
+        </Pressable>
+      ) : null}
+
       {/* Floating slot cards — no outer wrapper; each card sits on the canvas. */}
       {homeSupps.length === 0 ? (
         <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, backgroundColor: 'transparent', paddingVertical: spacing.xl, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
@@ -1146,6 +1206,7 @@ export default function Today({ user, onSignOut }) {
 
     {formModal}
     <BulkAddModal open={bulkAddOpen} onClose={() => setBulkAddOpen(false)} onSubmit={bulkAdd} submitting={bulkSubmitting} />
+    <CheckinSheet open={checkinOpen} onClose={() => setCheckinOpen(false)} initial={dayCheckin} onSave={saveCheckin} saving={checkinSaving} />
 
     {/* "Log at…" — pick the actual time an item was taken */}
     <Modal
