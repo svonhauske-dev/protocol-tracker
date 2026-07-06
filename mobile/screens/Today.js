@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Library, Plus, Pencil } from 'lucide-react-native';
+import { Library, Plus, Pencil, Activity } from 'lucide-react-native';
 import {
   dbGetProtocols,
   dbAddProtocol,
@@ -69,6 +69,7 @@ import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
 import SettingsScreen from './SettingsScreen';
 import ProtocolLibrary from './ProtocolLibrary';
+import Trends from './Trends';
 import ProtocolDetailScreen from './ProtocolDetailScreen';
 import SlideScreen from '../components/SlideScreen';
 import IconButton from '../components/IconButton';
@@ -136,6 +137,7 @@ export default function Today({ user, onSignOut }) {
   const [flashGreen, setFlashGreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showTrends, setShowTrends] = useState(false);
   const [detailProtocol, setDetailProtocol] = useState(null);
   const [remindersEnabled, setRemindersEnabled] = useState(() => global.localStorage.getItem('reminders_enabled') === '1');
   const [logAtTarget, setLogAtTarget] = useState(null); // { sid, suppId } — "log at…" picker
@@ -1085,6 +1087,7 @@ export default function Today({ user, onSignOut }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
+          <IconButton label="Trends" onPress={() => setShowTrends(true)}><Activity size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
               {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
@@ -1271,6 +1274,19 @@ export default function Today({ user, onSignOut }) {
           token={token()}
           onActivateReceived={activateReceived}
           onDeclineReceived={declineReceived}
+        />
+      ) : null}
+    </SlideScreen>
+
+    <SlideScreen visible={showTrends}>
+      {showTrends ? (
+        <Trends
+          supps={supps}
+          activeSlotIds={activeSlotIds}
+          slotDefs={slotDefs}
+          userId={user.id}
+          token={token()}
+          onBack={() => setShowTrends(false)}
         />
       ) : null}
     </SlideScreen>
