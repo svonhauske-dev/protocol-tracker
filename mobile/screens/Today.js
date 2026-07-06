@@ -1251,7 +1251,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
               explains why the Insights icon went amber (otherwise cryptic). */}
           {hasTimingConflict && !isPast && !isFuture && !readOnly ? (
             <View style={{ marginBottom: spacing.md }}>
-              <InlineTip id="timing-conflict" label="timing">two of your items compete for absorption at the same time — see insights › timing.</InlineTip>
+              <InlineTip id="timing-conflict" label="interactions">two of your items compete for absorption at the same time — see insights › interactions.</InlineTip>
             </View>
           ) : null}
           {!isPast && !isFuture && !readOnly && hasMultiSuppSlot ? (
@@ -1354,7 +1354,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
           slotDefs={slotDefs}
           userId={user.id}
           token={token()}
-          initialTab={hasTimingConflict ? 'timing' : 'adherence'}
+          initialTab={hasTimingConflict ? 'interactions' : 'adherence'}
           onBack={() => setShowInsights(false)}
         />
       ) : null}

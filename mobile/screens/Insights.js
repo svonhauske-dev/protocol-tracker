@@ -16,7 +16,7 @@ import { theme, spacing, icon } from '../theme';
 // urgent case, and `initialTab` opens straight to timing when a conflict exists.
 const TABS = [
   { value: 'adherence', label: 'adherence' },
-  { value: 'timing', label: 'timing' },
+  { value: 'interactions', label: 'interactions' },
 ];
 
 export default function Insights({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack, initialTab = 'adherence' }) {
