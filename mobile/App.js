@@ -30,6 +30,7 @@ import { getSession, signOut, dbGetSchedule } from 'shared/lib/api';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './theme';
 import { ToastProvider } from './components/Toast';
+import { ProProvider } from './context/ProContext';
 import { identify, resetAnalytics, setAnalyticsClient } from './lib/analytics';
 import Auth from './screens/Auth';
 import Onboarding from './screens/Onboarding';
@@ -110,6 +111,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ToastProvider>
+        <ProProvider userId={user?.id}>
         <View style={{ flex: 1, backgroundColor: theme.surface.canvas }} onLayout={onLayoutRootView}>
           {!ready ? (
             <AnimatedSplash />
@@ -130,6 +132,7 @@ export default function App() {
           )}
           <StatusBar style="light" />
         </View>
+        </ProProvider>
       </ToastProvider>
     </SafeAreaProvider>
   );

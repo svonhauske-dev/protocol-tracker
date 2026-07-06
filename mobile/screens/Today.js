@@ -58,6 +58,7 @@ import { computeSupply, trackingSupply, pluralizeUnit } from 'shared/lib/supply'
 import { tapHaptic } from '../lib/haptics';
 import { theme, spacing, typography, icon as iconSize, touch, fonts } from '../theme';
 import { Heading, Text, Button, Cursor, InlineTip, Callout } from '../components';
+import { useProGate } from '../context/ProContext';
 import Hero from '../components/Hero';
 import SlotCard from '../components/SlotCard';
 import WeekStrip from '../components/WeekStrip';
@@ -76,6 +77,7 @@ import SlideScreen from '../components/SlideScreen';
 import IconButton from '../components/IconButton';
 
 const ANYTIME_SLOT = { id: 'anytime', label: 'Anytime', sublabel: 'No specific time', icon: '◦' };
+const FREE_ITEM_CAP = 15; // free-tier regimen cap; Pro is unlimited
 
 // Day-1 inline tip per schedule mode — shows once in the empty state to teach the
 // scheduling mental model in context, then never returns (RN port of web DAY1_TIP).
@@ -139,6 +141,7 @@ export default function Today({ user, onSignOut }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const { isPro, requirePro, openPaywall } = useProGate();
   const [loadError, setLoadError] = useState(false);        // last data load failed
   const [offlineDismissed, setOfflineDismissed] = useState(false);
   const [detailProtocol, setDetailProtocol] = useState(null);
@@ -580,7 +583,16 @@ export default function Today({ user, onSignOut }) {
     return { amount: m?.[1] || '', form: DOSE_FORM_NORM[(m?.[2] || '').toLowerCase()] || '' };
   };
 
+  // Free tier caps the regimen at FREE_ITEM_CAP items; Pro is unlimited. Returns
+  // false + opens the paywall when a free user is at the cap.
+  const underItemCap = () => {
+    if (isPro || supps.length < FREE_ITEM_CAP) return true;
+    openPaywall('unlimited items');
+    return false;
+  };
+
   function openAdd() {
+    if (!underItemCap()) return;
     const active = protocols.filter((p) => p.status === 'active');
     setEditingId(null);
     setForm(blankForm(active.length === 1 ? active[0].id : null));
@@ -958,7 +970,7 @@ export default function Today({ user, onSignOut }) {
       {form ? (
         <>
           {!editingId ? (
-            <Pressable onPress={() => { closeForm(); setTimeout(() => setBulkAddOpen(true), 260); }} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 24 }} style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
+            <Pressable onPress={() => { closeForm(); setTimeout(() => { if (underItemCap()) setBulkAddOpen(true); }, 260); }} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 24 }} style={{ marginBottom: spacing.md, alignSelf: 'flex-start' }}>
               <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.accent.default }}>+ add several at once ›</Text>
             </Pressable>
           ) : null}
@@ -1098,7 +1110,7 @@ export default function Today({ user, onSignOut }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
-          <IconButton label="Insights" onPress={() => setShowInsights(true)}><Activity size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
+          <IconButton label="Insights" onPress={() => { if (requirePro('Insights')) setShowInsights(true); }}><Activity size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
               {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
@@ -1208,7 +1220,7 @@ export default function Today({ user, onSignOut }) {
           {!isPast ? (
             <>
               <Button variant="primary" fullWidth onPress={openAdd}>+ add item</Button>
-              <Button variant="tertiary" fullWidth onPress={() => setBulkAddOpen(true)} style={{ marginTop: spacing.xs }}>add several at once</Button>
+              <Button variant="tertiary" fullWidth onPress={() => { if (underItemCap()) setBulkAddOpen(true); }} style={{ marginTop: spacing.xs }}>add several at once</Button>
             </>
           ) : null}
         </View>

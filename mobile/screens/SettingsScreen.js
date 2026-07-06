@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
 import { isHealthSupported, requestHealthPermissions } from '../lib/health';
+import { useProGate } from '../context/ProContext';
 import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox, Cursor, ConfigRow } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
@@ -54,6 +55,7 @@ export default function SettingsScreen({
   remindersEnabled = false, onToggleReminders,
 }) {
   const insets = useSafeAreaInsets();
+  const { isPro, toggleDevPro } = useProGate();
   const [view, setView] = useState('main');
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [nameSaving, setNameSaving] = useState(false);
@@ -211,6 +213,9 @@ export default function SettingsScreen({
             />
           ) : null}
           <ConfigRow ix={healthSupported ? '05' : '04'} label="privacy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+          {__DEV__ ? (
+            <ConfigRow ix="dev" label="dev · pro" value={isPro ? 'ON' : 'OFF'} onPress={toggleDevPro} />
+          ) : null}
         </View>
 
         <Button variant="secondary" fullWidth style={{ marginTop: spacing.sm }} onPress={() => setShowSignOutConfirm(true)}>$ sign out</Button>
