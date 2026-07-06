@@ -120,7 +120,7 @@ function Avatar({ initial, onPress }) {
   );
 }
 
-export default function Today({ user, onSignOut }) {
+export default function Today({ user, onSignOut, justOnboarded = false, onTrialShown }) {
   const [loading, setLoading] = useState(true);
   const [supps, setSupps] = useState([]);
   const [protocols, setProtocols] = useState([]);
@@ -269,6 +269,17 @@ export default function Today({ user, onSignOut }) {
   const retryLoad = () => { setOfflineDismissed(false); loadStatic(); };
 
   useEffect(() => { loadStatic(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // New users see the trial paywall once, right after onboarding — the highest-
+  // converting placement. Skippable (dismiss = continue free) per the freemium model.
+  const trialShown = useRef(false);
+  useEffect(() => {
+    if (justOnboarded && !trialShown.current && !isPro) {
+      trialShown.current = true;
+      openPaywall();
+      onTrialShown?.();
+    }
+  }, [justOnboarded, isPro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!didMount.current) { didMount.current = true; return; }

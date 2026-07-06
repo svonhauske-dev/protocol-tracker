@@ -53,6 +53,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [justOnboarded, setJustOnboarded] = useState(false); // → trial paywall on first entry
 
   // Attach PostHog behind the analytics wrapper. Lazy + guarded so a build that
   // predates the native deps (async-storage) stays a NO-OP instead of crashing —
@@ -116,10 +117,12 @@ export default function App() {
           {!ready ? (
             <AnimatedSplash />
           ) : user && needsOnboarding ? (
-            <Onboarding user={user} onDone={() => setNeedsOnboarding(false)} />
+            <Onboarding user={user} onDone={() => { setNeedsOnboarding(false); setJustOnboarded(true); }} />
           ) : user ? (
             <Today
               user={user}
+              justOnboarded={justOnboarded}
+              onTrialShown={() => setJustOnboarded(false)}
               onSignOut={() => {
                 signOut();
                 resetAnalytics();
