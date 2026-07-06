@@ -17,7 +17,6 @@ export default function Modal({ open, onClose, title, children, footer }) {
   const reduceMotion = useReduceMotion();
   const slide = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
-  const prevContentH = useRef(0);
   const [openPickerId, setOpenPickerId] = useState(null);
   const { height: winH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -40,7 +39,6 @@ export default function Modal({ open, onClose, title, children, footer }) {
   useEffect(() => {
     if (open) {
       setRendered(true);
-      prevContentH.current = 0; // reset so the first measure on open doesn't auto-scroll
       slide.setValue(0);
       Animated.timing(slide, { toValue: 1, duration: 240, easing: Easing.out(Easing.ease), useNativeDriver: true }).start();
     } else if (rendered) {
@@ -110,14 +108,11 @@ export default function Modal({ open, onClose, title, children, footer }) {
           <ScrollView
             ref={scrollRef}
             style={{ height: contentH ? Math.min(contentH, scrollCap) : undefined }}
-            // When content GROWS past the cap AFTER open (e.g. a date/time picker
-            // opens mid-form), scroll to reveal it. Guard on prev>0 + growth so it
-            // never auto-scrolls on the initial mount of a tall form.
-            onContentSizeChange={(w, h) => {
-              setContentH(h);
-              if (h > scrollCap && prevContentH.current > 0 && h > prevContentH.current) scrollRef.current?.scrollToEnd({ animated: true });
-              prevContentH.current = h;
-            }}
+            // Measure content only to size the sheet (min(content, cap)). We do NOT
+            // auto-scroll on content growth: dynamic content like the name-field
+            // autocomplete appears near the TOP, so a scrollToEnd would jump the
+            // whole form to the bottom. iOS keyboard avoidance handles focus.
+            onContentSizeChange={(w, h) => setContentH(h)}
             contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: footer ? spacing.sm : SAFE_BOTTOM }}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}

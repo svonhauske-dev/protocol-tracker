@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -463,11 +463,17 @@ export default function Today({ user, onSignOut }) {
   }, [trackedSupps.map((s) => `${s.id}:${s.stock_filled_on}`).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const todayKey = dateKey(TODAY);
-  const supplyMap = {};
-  if (trackedSupps.length > 0) {
+  // Memoized: computeSupply loops the log history per tracked supp, and Today
+  // re-renders on every check toggle — recompute only when the inputs change.
+  const supplyMap = useMemo(() => {
+    const tracked = supps.filter(trackingSupply);
+    if (tracked.length === 0) return {};
     const todayRow = { log_date: todayKey, checked: sliceForDay(checked, todayKey) };
-    for (const s of trackedSupps) supplyMap[s.id] = computeSupply(s, [...supplyLogs, todayRow], TODAY);
-  }
+    const merged = [...supplyLogs, todayRow];
+    const m = {};
+    for (const s of tracked) m[s.id] = computeSupply(s, merged, TODAY);
+    return m;
+  }, [supps, supplyLogs, checked, todayKey]);
 
   let coreTotal = anytimeSupps.length + slottedPinnedSupps.length;
   let coreDone = 0;
