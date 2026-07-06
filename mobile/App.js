@@ -30,7 +30,7 @@ import { getSession, signOut, dbGetSchedule } from 'shared/lib/api';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { theme } from './theme';
 import { ToastProvider } from './components/Toast';
-import { identify, resetAnalytics } from './lib/analytics';
+import { identify, resetAnalytics, setAnalyticsClient } from './lib/analytics';
 import Auth from './screens/Auth';
 import Onboarding from './screens/Onboarding';
 import Today from './screens/Today';
@@ -52,6 +52,21 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+
+  // Attach PostHog behind the analytics wrapper. Lazy + guarded so a build that
+  // predates the native deps (async-storage) stays a NO-OP instead of crashing —
+  // it activates on the first build that includes posthog-react-native.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { default: PostHog } = await import('posthog-react-native');
+        const posthog = new PostHog('phc_ngd4nUCKUUYnmLLWEovbgsJKby4jrx5832fGYysPgKoS', {
+          host: 'https://us.i.posthog.com',
+        });
+        setAnalyticsClient(posthog);
+      } catch { /* native deps not in this build yet — analytics stays no-op */ }
+    })();
+  }, []);
 
   // Restore session on boot (reads sb_token via the storage shim → /auth/v1/user).
   // With the in-memory shim this is empty on a cold start, so it resolves to the
