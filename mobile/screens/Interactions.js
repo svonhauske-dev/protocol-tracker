@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { findInteractions, TIMING_DISCLAIMER } from 'shared/lib/interactions';
+import { findInteractions, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
 import { Heading, SectionHeader, Text, HelperText, Callout } from '../components';
 import IconButton from '../components/IconButton';
 import { theme, spacing, icon } from '../theme';
@@ -21,9 +21,12 @@ function InteractionCard({ item }) {
       <Text size="label" tone="tertiary" style={{ marginBottom: spacing.xs }}>
         {item.suppsA.join(', ')} ↔ {item.suppsB.join(', ')}
       </Text>
-      <Text size="caption" tone="secondary">
-        {item.note} {item.sameSlot ? `They're in the same slot — consider moving one, ~${item.sep} apart.` : `Keep ~${item.sep} between them.`}
-      </Text>
+      <Text size="caption" tone="secondary">{item.note}</Text>
+      {/* The coaching line — the actionable fix, the thing no other app gives. */}
+      <View style={{ flexDirection: 'row', marginTop: spacing.xs }}>
+        <Text size="caption" tone="tertiary" style={{ marginRight: spacing.xs }}>→</Text>
+        <Text size="caption" style={{ flex: 1, color: theme.text.primary }}>{coachLine(item)}</Text>
+      </View>
     </Callout>
   );
 }

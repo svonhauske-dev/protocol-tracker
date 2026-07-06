@@ -68,7 +68,7 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
         </Button>
       }
     >
-      <HelperText>rate your day — it plots against your protocol over time</HelperText>
+      <HelperText>a few taps a day — spot your patterns and feel more in control</HelperText>
       <RatingRow label="energy" value={energy} onChange={setEnergy} />
       <RatingRow label="mood" value={mood} onChange={setMood} />
       <RatingRow label="sleep" value={sleep} onChange={setSleep} />

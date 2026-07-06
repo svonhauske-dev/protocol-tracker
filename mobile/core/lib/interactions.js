@@ -30,16 +30,34 @@ export const INGREDIENTS = [
 // Each rule is a timing separation between two ingredients. `note` explains the
 // WHY in one plain sentence (absorption competition) — never a directive beyond
 // spacing.
+// `anchor: 'a'` marks the item that should be isolated / taken first (e.g.
+// levothyroxine on an empty stomach) — the other one is the one to move later.
+// Rules without an anchor just need spacing at different meals.
 export const RULES = [
-  { a: 'levothyroxine', b: 'calcium',   sep: '4 hours',    note: 'Calcium binds levothyroxine and reduces its absorption.' },
-  { a: 'levothyroxine', b: 'iron',      sep: '4 hours',    note: 'Iron binds levothyroxine and reduces its absorption.' },
-  { a: 'levothyroxine', b: 'magnesium', sep: '4 hours',    note: 'Magnesium can reduce levothyroxine absorption.' },
-  { a: 'levothyroxine', b: 'caffeine',  sep: '30–60 min',  note: 'Coffee can cut levothyroxine absorption — many take it on an empty stomach first.' },
+  { a: 'levothyroxine', b: 'calcium',   sep: '4 hours',    anchor: 'a', note: 'Calcium binds levothyroxine and reduces its absorption.' },
+  { a: 'levothyroxine', b: 'iron',      sep: '4 hours',    anchor: 'a', note: 'Iron binds levothyroxine and reduces its absorption.' },
+  { a: 'levothyroxine', b: 'magnesium', sep: '4 hours',    anchor: 'a', note: 'Magnesium can reduce levothyroxine absorption.' },
+  { a: 'levothyroxine', b: 'caffeine',  sep: '30–60 min',  anchor: 'a', note: 'Coffee can cut levothyroxine absorption — take it on an empty stomach first.' },
   { a: 'calcium',       b: 'iron',      sep: '2 hours',    note: 'Calcium and iron compete for absorption.' },
   { a: 'zinc',          b: 'iron',      sep: '2 hours',    note: 'Zinc and iron compete for absorption.' },
   { a: 'zinc',          b: 'calcium',   sep: '2 hours',    note: 'Calcium can reduce zinc absorption.' },
   { a: 'zinc',          b: 'copper',    sep: '2 hours',    note: 'Zinc and copper compete for absorption.' },
 ];
+
+// The actionable coaching line — the differentiator. Turns "these conflict" into
+// "here's what to do." Timing only (never dosage): move the non-anchor to a
+// later meal, or space unanchored pairs across meals.
+export function coachLine(item) {
+  if (item.anchor === 'a' || item.anchor === 'b') {
+    const anchorLabel = item.anchor === 'a' ? item.aLabel : item.bLabel;
+    const moverLabel = item.anchor === 'a' ? item.bLabel : item.aLabel;
+    if (anchorLabel === 'levothyroxine') {
+      return `Take ${anchorLabel} first thing on an empty stomach, then keep ${moverLabel} to lunch or the evening — at least ${item.sep} later.`;
+    }
+    return `Take ${anchorLabel} on its own, and move ${moverLabel} at least ${item.sep} later.`;
+  }
+  return `Take them at different meals — at least ${item.sep} apart.`;
+}
 
 const norm = (s) => (s || '').toLowerCase();
 const labelOf = (id) => INGREDIENTS.find((i) => i.id === id)?.label || id;
@@ -85,6 +103,7 @@ export function findInteractions(supps) {
       aLabel: labelOf(rule.a),
       bLabel: labelOf(rule.b),
       sep: rule.sep,
+      anchor: rule.anchor || null,
       note: rule.note,
       suppsA: [...new Set(as.map((t) => t.supp.name))],
       suppsB: [...new Set(bs.map((t) => t.supp.name))],

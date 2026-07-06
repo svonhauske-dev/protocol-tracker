@@ -200,7 +200,7 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
             {/* Always show the three tracks — empty when unlogged, so the shape is
                 visible — with a one-line prompt above until check-ins accrue. */}
             {!model.hasOutcomes ? (
-              <Text tone="secondary" size="caption" style={{ marginBottom: spacing.md }}>rate energy, mood &amp; sleep from your home screen — they plot against what you're taking.</Text>
+              <Text tone="secondary" size="caption" style={{ marginBottom: spacing.md }}>check in daily to spot your patterns — how energy, mood &amp; sleep move over time.</Text>
             ) : null}
             {model.outcomes.map((o) => (
               <View key={o.key} style={{ marginBottom: spacing.md }}>
