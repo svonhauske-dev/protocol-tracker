@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { View, ScrollView, Pressable, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { dbUpdateProfile, updateEmail, updatePassword } from 'shared/lib/api';
 import { deleteAccount } from '../lib/account';
+import { isHealthSupported, requestHealthPermissions } from '../lib/health';
 import { Heading, Label, SectionHeader, Text, Button, Row, Input, Checkbox, Cursor, ConfigRow } from '../components';
 import InlineLoader from '../components/InlineLoader';
 import Modal from '../components/Modal';
@@ -67,6 +68,12 @@ export default function SettingsScreen({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState('');
+  // Apple Health — the row only appears when the native module is actually in
+  // this build AND the device has HealthKit (never on Simulator). Until the
+  // dedicated Health build ships, isHealthSupported() resolves false → no row.
+  const [healthSupported, setHealthSupported] = useState(false);
+  const [healthAsked, setHealthAsked] = useState(false);
+  useEffect(() => { let a = true; isHealthSupported().then((ok) => { if (a) setHealthSupported(ok); }); return () => { a = false; }; }, []);
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -195,7 +202,15 @@ export default function SettingsScreen({
               </View>
             }
           />
-          <ConfigRow ix="04" label="privacy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+          {healthSupported ? (
+            <ConfigRow
+              ix="04"
+              label="apple health"
+              value={healthAsked ? 'REQUESTED' : 'CONNECT'}
+              onPress={async () => { await requestHealthPermissions(); setHealthAsked(true); }}
+            />
+          ) : null}
+          <ConfigRow ix={healthSupported ? '05' : '04'} label="privacy" onPress={() => Linking.openURL(PRIVACY_URL)} />
         </View>
 
         <Button variant="secondary" fullWidth style={{ marginTop: spacing.sm }} onPress={() => setShowSignOutConfirm(true)}>$ sign out</Button>
