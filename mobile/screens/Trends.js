@@ -43,7 +43,7 @@ function BarSeries({ values, height = 44, green100 = false }) {
         const frac = has ? Math.max(0, Math.min(1, v)) : 0;
         const full = green100 && frac >= 1;
         return (
-          <View key={i} style={{ flex: 1, height: '100%', justifyContent: 'flex-end', backgroundColor: theme.status.missedBg }}>
+          <View key={i} style={{ flex: 1, height, justifyContent: 'flex-end', backgroundColor: theme.status.missedBg }}>
             <View
               style={{
                 height: has ? Math.max(2, frac * height) : 1,
