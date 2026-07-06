@@ -114,16 +114,23 @@ export async function readStepsToday() {
 // ─────────────────────────────────────────────────────────────────────────────
 // ACTIVATION (rides a dedicated native build — cannot be verified in Simulator):
 //
+//   NOTE: this project has a COMMITTED, git-tracked ios/ directory (bare /
+//   prebuild workflow — EAS builds from the native project, not from app.json's
+//   managed config). So the Kingstinct CONFIG PLUGIN in app.json will NOT apply
+//   on its own. Configure the native project directly (or `expo prebuild --clean`,
+//   which regenerates ios/ and would drop any manual native customizations —
+//   diff carefully first).
+//
 //   1. npm i @kingstinct/react-native-healthkit react-native-nitro-modules
-//   2. app.json → ios.entitlements: { "com.apple.developer.healthkit": true }
-//      and add the config plugin to "plugins":
-//        ["@kingstinct/react-native-healthkit", {
-//           "NSHealthShareUsageDescription":
-//             "Origin reads sleep and activity to show how your protocol tracks against how you feel.",
-//           "NSHealthUpdateUsageDescription":
-//             "Origin can save your daily check-in to Health.",
-//           "background": false
-//        }]
+//      then `npx pod-install` (or `cd ios && pod install`).
+//   2. In the native iOS project (Xcode / ios/):
+//        • Signing & Capabilities → add the HealthKit capability
+//          (adds com.apple.developer.healthkit to the .entitlements).
+//        • Info.plist → add:
+//            NSHealthShareUsageDescription  = "Origin reads sleep and activity
+//              to show how your protocol tracks against how you feel."
+//            NSHealthUpdateUsageDescription = "Origin can save your daily
+//              check-in to Health."
 //      (The privacy manifest already declares NSPrivacyCollectedDataTypeHealth.)
 //   3. eas build (a native rebuild) → verify read on a real device (HealthKit is
 //      unavailable on the iOS Simulator).
