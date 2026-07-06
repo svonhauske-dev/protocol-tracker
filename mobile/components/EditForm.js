@@ -203,7 +203,7 @@ export default function EditForm({
         <HelperText>optional — how many in the bottle, to track refills</HelperText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           <Input width={100} keyboardType="numeric" value={form.stock_count} placeholder="e.g. 90" onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v.replace(/[^0-9.]/g, '') }))} />
-          <Text tone="tertiary" size="label">{form.stock_unit && form.stock_unit !== OTHER ? `${form.stock_unit}s in the bottle` : 'in the bottle'}</Text>
+          <Text tone="tertiary" size="label">{form.stock_unit && form.stock_unit !== OTHER ? `${form.stock_unit === 'mL' ? 'mL' : `${form.stock_unit}s`} in the bottle` : 'in the bottle'}</Text>
         </View>
       </View>
 

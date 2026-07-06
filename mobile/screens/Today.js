@@ -589,7 +589,10 @@ export default function Today({ user, onSignOut }) {
     const parseNum = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
     const doseAmount = parseNum(form.units_per_dose);
     const doseForm = form.stock_unit === '__OTHER__' ? '' : (form.stock_unit || '').trim();
-    const composedDose = [form.units_per_dose?.trim?.() || '', doseForm].filter(Boolean).join(' ');
+    // Pluralize the form for display when the amount is >1 ("2 capsules"), except
+    // measure units like mL. The stored stock_unit stays singular (the chip value).
+    const displayForm = doseForm && doseAmount != null && doseAmount !== 1 && doseForm !== 'mL' ? `${doseForm}s` : doseForm;
+    const composedDose = [form.units_per_dose?.trim?.() || '', displayForm].filter(Boolean).join(' ');
     const doseStr = composedDose || form.dose || '';
 
     // Supply: bottle count is optional. Re-anchor stock_filled_on to today
