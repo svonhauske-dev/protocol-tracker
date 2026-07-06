@@ -303,8 +303,8 @@ export default function EditForm({
               {slot.label}
             </Button>
           ))}
-        </View>
-        <View style={{ marginTop: spacing.sm, flexDirection: 'row', gap: spacing.xs }}>
+          {/* Anytime + Specific time flow in the SAME wrap row as the slots, so
+              they sit next to Evening instead of dropping to their own block. */}
           <Button variant="selector" active={form.slots.length === 0} onPress={() => setForm((f) => ({ ...f, slots: [] }))}>Anytime</Button>
           <Button
             variant="selector"
