@@ -590,8 +590,15 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   // amount + form so editing an old item pre-fills the new structured fields.
   const DOSE_FORM_NORM = { cap: 'capsule', caps: 'capsule', capsule: 'capsule', capsules: 'capsule', pill: 'pill', pills: 'pill', tablet: 'tablet', tablets: 'tablet', tab: 'tablet', tabs: 'tablet', softgel: 'softgel', softgels: 'softgel', caplet: 'caplet', caplets: 'caplet', troche: 'troche', lozenge: 'lozenge', gummy: 'gummy', gummies: 'gummy', drop: 'drop', drops: 'drop', spray: 'spray', sprays: 'spray', ml: 'mL', scoop: 'scoop', scoops: 'scoop', sachet: 'sachet', patch: 'patch', patches: 'patch', injection: 'injection', injections: 'injection', unit: 'unit', units: 'unit' };
   const parseDose = (dose) => {
-    const m = String(dose || '').match(/^\s*([0-9.]+)?\s*([a-zA-Z]+)?/);
-    return { amount: m?.[1] || '', form: DOSE_FORM_NORM[(m?.[2] || '').toLowerCase()] || '' };
+    // Strip the legacy "| strength" first (it lives in notes now), then split into
+    // amount + form. Use the FULL word (Unicode) so non-English units like
+    // "cápsula" survive — normalise to a canonical chip when recognised, else keep
+    // the raw word (EditForm shows it as a free-text "other" unit).
+    const clean = String(dose || '').split('|')[0];
+    const m = clean.match(/^\s*([0-9.]+)?\s*(.+?)\s*$/);
+    const amount = m?.[1] || '';
+    const rawForm = (m?.[2] || '').trim();
+    return { amount, form: DOSE_FORM_NORM[rawForm.toLowerCase()] || rawForm };
   };
 
   // Free tier caps the regimen at FREE_ITEM_CAP items; Pro is unlimited. Returns
@@ -683,7 +690,9 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     // stock_unit stays singular (the chip value).
     const displayForm = pluralizeUnit(doseForm, doseAmount);
     const composedDose = [form.units_per_dose?.trim?.() || '', displayForm].filter(Boolean).join(' ');
-    const doseStr = composedDose || form.dose || '';
+    // Fallback strips any legacy "| strength" so a dose can never carry it back
+    // into the DB (the strength is preserved in notes) — belt to the openEdit brace.
+    const doseStr = composedDose || (form.dose || '').split('|')[0].trim();
 
     // Supply: bottle count is optional. Re-anchor stock_filled_on to today
     // whenever the count changes (a refill); keep the prior anchor otherwise so
