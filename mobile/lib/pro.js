@@ -9,6 +9,11 @@
 // with a 14-day free trial. Single entitlement: "pro".
 import { Platform } from 'react-native';
 
+// MASTER SWITCH. While false the whole app is open — every gate passes, no
+// paywall, no onboarding trial prompt (ProProvider forces isPro = true). Flip to
+// true to re-enable the Phase-4 subscription machinery (which is left intact).
+export const MONETIZATION_ENABLED = false;
+
 // RevenueCat public SDK key (safe to ship — it's a client key). Set once the
 // RevenueCat project exists; until then configure() no-ops.
 export const RC_API_KEY_IOS = ''; // e.g. 'appl_xxxxxxxxxxxxxxxxxxxxxxxxx'

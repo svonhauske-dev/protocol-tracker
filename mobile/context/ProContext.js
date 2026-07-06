@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import Paywall from '../components/Paywall';
 import { dbGetProfile } from 'shared/lib/api';
 import {
+  MONETIZATION_ENABLED,
   configurePro, fetchProStatus, getOfferings, purchasePackage, restorePurchases,
   getDevPro, setDevPro,
 } from '../lib/pro';
@@ -17,12 +18,13 @@ export function useProGate() {
 }
 
 export function ProProvider({ userId, children }) {
-  const [isPro, setIsPro] = useState(getDevPro());
+  const [isPro, setIsPro] = useState(!MONETIZATION_ENABLED || getDevPro());
   const [packages, setPackages] = useState([]);
   const [paywall, setPaywall] = useState(null); // null | { feature }
   const [purchasing, setPurchasing] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (!MONETIZATION_ENABLED) { setIsPro(true); return; } // app fully open
     const dev = getDevPro();
     const { isPro: rc, available } = await fetchProStatus();
     // Server-side grant: comped Pro (testers / promo redemption) sets
