@@ -46,8 +46,9 @@ function dayRestriction(days) {
   if (!Array.isArray(days) || days.length === 0 || days.length === 7) return '';
   return [...days].sort((a, b) => a - b).map((d) => DAYS_SHORT[d]).join(', ');
 }
-// Precedence: cycle pattern → scheduled end → day restriction → notes.
-function metadata(s) {
+// Schedule qualifier only (cycle / scheduled-end / day-restriction) — NOT notes.
+// Notes render in full on the detail line, so they're no longer truncated here.
+function scheduleQualifier(s) {
   if (s.treatment_mode === 'cycled' && s.cycle_on_value && s.cycle_off_value) {
     const on = s.cycle_on_value === 1 ? trimS(s.cycle_on_unit) : s.cycle_on_unit;
     const off = s.cycle_off_value === 1 ? trimS(s.cycle_off_unit) : s.cycle_off_unit;
@@ -55,12 +56,9 @@ function metadata(s) {
   }
   if (s.treatment_mode === 'scheduled' && s.ends_at) {
     const d = parseLocalDate(s.ends_at);
-    if (d) return `Through ${fmtShort(d)}`;
+    if (d) return `through ${fmtShort(d)}`;
   }
-  const dr = dayRestriction(s.days);
-  if (dr) return dr;
-  if (s.notes?.trim()) { const n = s.notes.trim(); return n.length > 40 ? `${n.slice(0, 39)}…` : n; }
-  return '';
+  return dayRestriction(s.days) || '';
 }
 
 // ── Grouping (ported from src/lib/pdf.js groupBySlot) ────────────────────────
@@ -102,66 +100,74 @@ function buildHtml(protocol, supps, profile, scheduleMode) {
   const count = groups.reduce((n, g) => n + g.supps.length, 0);
 
   const status = [
-    `For: ${esc(displayName(profile))}`,
+    `For ${esc(displayName(profile))}`,
     'Active',
     startedDate(protocol) ? `Started ${esc(startedDate(protocol))}` : '',
     esc(treatmentMode(protocol)),
-  ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
   const sections = groups.map((g) => {
-    const rows = g.supps.map((s) => {
-      const meta = metadata(s);
-      return `<tr>
-        <td class="nm">${esc(s.name)}</td>
-        <td class="dose">${esc(s.dose || '')}</td>
-        <td class="meta">${esc(meta)}</td>
-      </tr>`;
+    const items = g.supps.map((s) => {
+      // Detail line: dose (emphasised) · notes/strength (in full — no truncation)
+      // · schedule qualifier. Left-aligned, wraps naturally.
+      const parts = [];
+      if (s.dose) parts.push(`<span class="d-dose">${esc(s.dose)}</span>`);
+      if (s.notes && s.notes.trim()) parts.push(esc(s.notes.trim()));
+      const q = scheduleQualifier(s);
+      if (q) parts.push(esc(q));
+      const detail = parts.join(' &nbsp;·&nbsp; ');
+      return `<div class="item">
+        <div class="i-name">${esc(s.name)}</div>
+        ${detail ? `<div class="i-detail">${detail}</div>` : ''}
+      </div>`;
     }).join('');
-    return `<div class="slot">
-      <div class="slot-label">${esc(g.label)}</div>
-      <table>${rows}</table>
-    </div>`;
+    return `<section class="slot">
+      <div class="slot-head"><span class="slot-label">${esc(g.label)}</span><span class="slot-count">${g.supps.length}</span></div>
+      ${items}
+    </section>`;
   }).join('');
 
   const body = count === 0
-    ? `<div class="empty">No active items in this protocol.</div>`
+    ? `<div class="empty">$ no active items in this protocol</div>`
     : sections;
 
   return `<!doctype html><html><head><meta charset="utf-8"/>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    @page { margin: 44px; }
+    @page { margin: 56px 52px; }
     * { box-sizing: border-box; }
-    body { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; color: #0d0d0d; -webkit-font-smoothing: antialiased; font-size: 13px; }
+    body { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; color: #0d0d0d; -webkit-font-smoothing: antialiased; font-size: 12px; line-height: 1.5; }
 
-    /* Header — protocol name (Grotesk) left, ORIGIN wordmark right */
-    .head { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 16px; border-bottom: 1.5px solid #0d0d0d; }
-    .head h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 20px; margin: 0; letter-spacing: -0.3px; }
-    .wordmark { font-size: 11px; letter-spacing: 3px; color: #0d0d0d; text-transform: uppercase; }
+    /* ── Masthead — stacked, left-aligned (one clean edge for everything) ── */
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #0d0d0d; }
+    h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 27px; letter-spacing: -0.6px; margin: 9px 0 0; line-height: 1.1; }
+    .meta { font-family: 'Space Grotesk', sans-serif; font-size: 12px; color: #565656; margin-top: 10px; }
+    .meta .count { color: #0d0d0d; }
+    .rule { height: 2px; background: #0d0d0d; margin: 18px 0 2px; }
 
-    /* Owner / status row */
-    .status { font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; color: #666; padding: 16px 0; border-bottom: 0.5px solid #e5e5e5; }
+    /* ── Slot sections ── */
+    .slot { margin-top: 26px; break-inside: avoid; }
+    .slot-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid #0d0d0d; padding-bottom: 6px; }
+    .slot-label { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; }
+    .slot-count { font-size: 10px; letter-spacing: 1px; color: #a0a0a0; }
 
-    /* Slot sections */
-    .slot { margin-top: 22px; }
-    .slot-label { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #0d0d0d; padding-bottom: 4px; border-bottom: 0.5px solid #0d0d0d; }
-    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-    td { padding: 7px 0; vertical-align: top; }
-    .nm { font-weight: 700; width: 46%; padding-right: 10px; }
-    .dose { color: #444; width: 22%; padding-right: 10px; white-space: nowrap; }
-    .meta { color: #666; width: 32%; text-align: right; }
+    /* ── Items — two lines: name (Grotesk, the hero) + detail (mono, the data) ── */
+    .item { padding: 11px 0; border-bottom: 0.75px solid #ededed; break-inside: avoid; }
+    .item:last-child { border-bottom: none; }
+    .i-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px; letter-spacing: -0.2px; }
+    .i-detail { font-size: 11.5px; color: #666; margin-top: 4px; line-height: 1.55; }
+    .i-detail .d-dose { color: #0d0d0d; font-weight: 500; }
 
-    .empty { color: #666; text-align: center; padding: 40px 0; }
+    .empty { color: #888; padding: 48px 0; font-size: 13px; }
 
-    /* Footer */
-    .foot { margin-top: 34px; padding-top: 12px; border-top: 0.5px solid #e5e5e5; display: flex; justify-content: space-between; font-family: 'Space Grotesk', sans-serif; font-size: 10px; color: #888; }
+    /* ── Footer ── */
+    .foot { margin-top: 40px; padding-top: 12px; border-top: 1px solid #0d0d0d; display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 0.3px; color: #999; }
   </style></head>
   <body>
-    <div class="head">
-      <h1>${esc(protocol?.name || 'Untitled protocol')}</h1>
-      <span class="wordmark">ORIGIN</span>
-    </div>
-    <div class="status">${status}</div>
+    <div class="eyebrow">ORIGIN</div>
+    <h1>${esc(protocol?.name || 'Untitled protocol')}</h1>
+    <div class="meta">${status}<br/><span class="count">${count} ${count === 1 ? 'item' : 'items'} · ${groups.length} ${groups.length === 1 ? 'group' : 'groups'}</span></div>
+    <div class="rule"></div>
     ${body}
     <div class="foot">
       <span>Generated by Origin · ${esc(fmtLong(new Date()))}</span>
