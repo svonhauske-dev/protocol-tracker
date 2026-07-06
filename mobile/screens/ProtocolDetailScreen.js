@@ -9,6 +9,7 @@ import TabBar from '../components/TabBar';
 import Modal from '../components/Modal';
 import IconButton from '../components/IconButton';
 import { useToast } from '../components/Toast';
+import { useProGate } from '../context/ProContext';
 import { shareProtocolPdf, protocolHtml } from '../lib/protocolPdf';
 import { pluralizeUnit } from 'shared/lib/supply';
 import PdfPreviewModal from '../components/PdfPreviewModal';
@@ -83,6 +84,7 @@ export default function ProtocolDetailScreen({
   onAddSupp, onEditSupp, onTogglePauseSupp, onResumeSupp, onDeleteSupp, onSendProtocol,
 }) {
   const insets = useSafeAreaInsets();
+  const { requirePro } = useProGate();
   const [tab, setTab] = useState('active');
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState('');
@@ -252,8 +254,8 @@ export default function ProtocolDetailScreen({
       {/* Overflow action sheet */}
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="protocol options">
         <View style={{ gap: spacing.xs }}>
-          <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setSendErr(''); setSendEmail(''); setSendOpen(true); }}>send to a person</Button>
-          <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setPdfPreviewOpen(true); }}>share PDF</Button>
+          <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); if (!requirePro('protocol sharing')) return; setSendErr(''); setSendEmail(''); setSendOpen(true); }}>send to a person</Button>
+          <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); if (!requirePro('PDF export')) return; setPdfPreviewOpen(true); }}>share PDF</Button>
           {isActive ? (
             <Button variant="secondary" fullWidth onPress={() => { setMenuOpen(false); setConfirmAction('archive'); }}>save protocol</Button>
           ) : (

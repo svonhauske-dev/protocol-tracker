@@ -15,6 +15,7 @@ import Badge from './Badge';
 import HelperText from './HelperText';
 import Text from './Text';
 import Callout from './Callout';
+import { useProGate } from '../context/ProContext';
 import { theme, spacing, typography, touch, fonts } from '../theme';
 
 // RN port of src/components/EditForm.jsx. Text + selector fields are fully
@@ -70,6 +71,7 @@ export default function EditForm({
   activeProtocols = [],
   otherSupps = [],
 }) {
+  const { isPro, openPaywall } = useProGate();
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
   const [pinnedOpen, setPinnedOpen] = useState(!!form.pinned_time);
@@ -141,7 +143,7 @@ export default function EditForm({
 
   // Timing guidance (NOT medical advice) — does this item conflict with anything
   // already in the regimen? Recomputed live as name/slots change.
-  const timingHits = form.name && form.name.trim() ? checkCandidate(form.name, form.slots, otherSupps) : [];
+  const timingHits = isPro && form.name && form.name.trim() ? checkCandidate(form.name, form.slots, otherSupps) : [];
 
   const mode = form.treatment_mode || 'indefinite';
   const dateOrderError = mode !== 'indefinite' && form.starts_at && form.ends_at && form.ends_at <= form.starts_at;
@@ -208,11 +210,21 @@ export default function EditForm({
           bottle"). Optional; "N left · ≈X days" derives from your check-off history. */}
       <View style={{ marginBottom: spacing.md }}>
         <SectionHeader>Supply</SectionHeader>
-        <HelperText>optional — how many in the bottle, to track refills</HelperText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Input width={100} keyboardType="numeric" value={form.stock_count} placeholder="e.g. 90" onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v.replace(/[^0-9.]/g, '') }))} />
-          <Text tone="tertiary" size="label">{form.stock_unit && form.stock_unit !== OTHER ? `${pluralizeUnit(form.stock_unit, 2)} in the bottle` : 'in the bottle'}</Text>
-        </View>
+        {isPro ? (
+          <>
+            <HelperText>optional — how many in the bottle, to track refills</HelperText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Input width={100} keyboardType="numeric" value={form.stock_count} placeholder="e.g. 90" onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v.replace(/[^0-9.]/g, '') }))} />
+              <Text tone="tertiary" size="label">{form.stock_unit && form.stock_unit !== OTHER ? `${pluralizeUnit(form.stock_unit, 2)} in the bottle` : 'in the bottle'}</Text>
+            </View>
+          </>
+        ) : (
+          // Locked teaser — refill/reorder tracking is Pro; tap opens the paywall.
+          <Pressable onPress={() => openPaywall('refill tracking')} accessibilityRole="button" accessibilityLabel="Refill tracking — Origin Pro" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.md, paddingHorizontal: spacing.md }}>
+            <Text tone="secondary" size="caption">track refills — get a reorder reminder before you run out</Text>
+            <Text size="label" style={{ color: theme.accent.default, marginLeft: spacing.sm }}>Pro ›</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={{ marginBottom: spacing.md }}>

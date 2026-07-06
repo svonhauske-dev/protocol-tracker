@@ -9,6 +9,7 @@ import DateRangeField from '../components/DateRangeField';
 import Modal from '../components/Modal';
 import TabBar from '../components/TabBar';
 import IconButton from '../components/IconButton';
+import { useProGate } from '../context/ProContext';
 import { theme, spacing, typography, touch, icon, fonts } from '../theme';
 
 // Scoped single-user RN port of src/components/ProtocolLibrary.jsx — list
@@ -87,6 +88,7 @@ function EmptyState({ eyebrow, line, onNew }) {
 
 export default function ProtocolLibrary({ protocols = [], supplements = [], onAddProtocol, onOpenDetail, onBack, userId, token, onActivateReceived, onDeclineReceived }) {
   const insets = useSafeAreaInsets();
+  const { isPro, openPaywall } = useProGate();
   const today = new Date().toISOString().split('T')[0];
   const [tab, setTab] = useState('active');
   // Received protocols (peer-to-peer) — pending sends to this user.
@@ -128,6 +130,9 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
   const archivedProtocols = protocols.filter((p) => p.status !== 'active').sort((a, b) => a.name.localeCompare(b.name));
   const suppCount = (pid) => supplements.filter((s) => s.protocol_id === pid).length;
 
+  // Free tier = one protocol; Pro is unlimited. Gate the create trigger.
+  const openNew = () => { if (!isPro && protocols.length >= 1) { openPaywall('unlimited protocols'); return; } setShowNew(true); };
+
   const dateError = txMode === 'scheduled' && schedSub === 'dates' && startsAt && endsAt && endsAt <= startsAt;
   const step1Valid =
     newName.trim() &&
@@ -167,7 +172,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
         <IconBtn label="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconBtn>
         <Heading level={1} visual="body" font="body">Protocols</Heading>
-        <IconBtn label="New protocol" onPress={() => setShowNew(true)}><Plus size={icon.sm} color={theme.text.secondary} /></IconBtn>
+        <IconBtn label="New protocol" onPress={openNew}><Plus size={icon.sm} color={theme.text.secondary} /></IconBtn>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
@@ -192,7 +197,7 @@ export default function ProtocolLibrary({ protocols = [], supplements = [], onAd
 
         {tab === 'active' ? (
           activeProtocols.length === 0 ? (
-            <EmptyState eyebrow="protocols — empty" line="build your first protocol" onNew={() => setShowNew(true)} />
+            <EmptyState eyebrow="protocols — empty" line="build your first protocol" onNew={openNew} />
           ) : (
             <View style={{ borderLeftWidth: 2, borderLeftColor: theme.border.subtle }}>
               {activeProtocols.map((p, i) => (
