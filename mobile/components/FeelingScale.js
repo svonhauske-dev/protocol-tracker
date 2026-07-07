@@ -1,5 +1,6 @@
 import { View, Pressable } from 'react-native';
 import Text from './Text';
+import Cursor from './Cursor';
 import { theme, spacing, typography, fonts } from '../theme';
 
 // The daily "how you feel" vocabulary — one overall wellbeing state, 1–5. Backed
@@ -11,17 +12,20 @@ export const FEELING_STATES = ['rough', 'low', 'ok', 'good', 'great'];
 // clock/adherence numerals), on a calibrated tick rail with a marker you set —
 // an instrument, not a boxed control. The filled marker is Origin's inverted
 // primary, the same highlight language as the TODAY chip and done state.
-export default function FeelingScale({ value, onSet }) {
+export default function FeelingScale({ value, onSet, emptyLabel = '$ tap where you land today' }) {
   const last = FEELING_STATES.length - 1;
   const align = (i) => (i === 0 ? 'flex-start' : i === last ? 'flex-end' : 'center');
   return (
     <View>
-      {/* The chosen state, named large. Empty prompt before you pick. */}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', minHeight: 30, marginBottom: spacing.xs }}>
+      {/* The chosen state, named large. Before you pick: a prompt, or — when the
+          surrounding surface already asks the question — a quiet cursor. */}
+      <View style={{ flexDirection: 'row', alignItems: value != null ? 'flex-end' : 'center', minHeight: 30, marginBottom: spacing.xs }}>
         {value != null ? (
           <Text style={{ fontFamily: fonts.grotesk.semibold, fontSize: typography.display, lineHeight: typography.display, color: theme.text.primary }}>{FEELING_STATES[value - 1]}</Text>
+        ) : emptyLabel ? (
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}>{emptyLabel}</Text>
         ) : (
-          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.tertiary }}>$ tap where you land today</Text>
+          <Cursor width={9} height={20} color={theme.text.tertiary} />
         )}
       </View>
 

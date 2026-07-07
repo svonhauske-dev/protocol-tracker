@@ -68,6 +68,7 @@ import EditForm from '../components/EditForm';
 import BulkAddModal from '../components/BulkAddModal';
 import CheckinSheet from '../components/CheckinSheet';
 import FeelingScale, { FEELING_STATES } from '../components/FeelingScale';
+import MorningCheckin from '../components/MorningCheckin';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
@@ -188,6 +189,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinSaving, setCheckinSaving] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false); // "+ details" reveals energy/sleep/note
+  const [momentOpen, setMomentOpen] = useState(false); // once-a-day morning check-in ritual
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -568,6 +570,20 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     while (checkinDays.has(dateKey(d))) { streak++; d.setDate(d.getDate() - 1); }
     return streak;
   }, [checkinDays]);
+
+  // The daily moment — surface the check-in ritual once per launch-day, only when
+  // today's feeling isn't logged. localStorage guards it to one show/day; it's
+  // always dismissible and the inline card remains the fallback.
+  useEffect(() => {
+    if (loading || justOnboarded) return;
+    if (dateKey(viewDate) !== dateKey(TODAY)) return;
+    if (dayCheckin === undefined) return;               // not fetched yet
+    if (dayCheckin && dayCheckin.mood != null) return;  // feeling already logged
+    const todayKey = dateKey(TODAY);
+    if (global.localStorage.getItem('checkin_moment_seen') === todayKey) return;
+    global.localStorage.setItem('checkin_moment_seen', todayKey);
+    setMomentOpen(true);
+  }, [loading, justOnboarded, dayCheckin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Inline 5-second save — optimistic + debounced upsert (three quick taps = one
   // write). No modal, no save button; the note stays in the sheet.
@@ -1396,6 +1412,17 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     {formModal}
     <BulkAddModal open={bulkAddOpen} onClose={() => setBulkAddOpen(false)} onSubmit={bulkAdd} submitting={bulkSubmitting} />
     <CheckinSheet open={checkinOpen} onClose={() => setCheckinOpen(false)} initial={dayCheckin} onSave={saveCheckin} saving={checkinSaving} />
+
+    <MorningCheckin
+      open={momentOpen}
+      name={(profile?.display_name || '').trim().split(/\s+/)[0].toLowerCase() || 'there'}
+      dateLabel={TODAY.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toLowerCase().replace(', ', ' · ')}
+      hour={new Date().getHours()}
+      streak={checkinStreak}
+      onSelect={(v) => quickSaveCheckin('mood', v)}
+      onNote={() => { setMomentOpen(false); setCheckinOpen(true); }}
+      onClose={() => setMomentOpen(false)}
+    />
 
     {/* "Log at…" — pick the actual time an item was taken */}
     <Modal
