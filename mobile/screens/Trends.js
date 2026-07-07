@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { dateKey, startOfDay } from 'shared/lib/time';
@@ -8,9 +8,10 @@ import {
   calculateSlotAdherence,
   calculateSupplementAdherence,
 } from 'shared/lib/adherence';
-import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
+import { dbGetDailyLogsRange, dbGetCheckinsRange, dbUpsertCheckin } from 'shared/lib/api';
 import { Heading, SectionHeader, Text, Meter, InlineTip, EmptyState } from '../components';
 import { FEELING_STATES } from '../components/FeelingScale';
+import CheckinSheet from '../components/CheckinSheet';
 import IconButton from '../components/IconButton';
 import { theme, spacing, typography, icon } from '../theme';
 
@@ -78,8 +79,30 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState(null);       // null = loading
   const [checkins, setCheckins] = useState([]);
+  const [checkinOpen, setCheckinOpen] = useState(false);
+  const [checkinSaving, setCheckinSaving] = useState(false);
 
   const dates = useMemo(() => lastNDates(WINDOW), []);
+  const todayKey = dateKey(dates[dates.length - 1]);
+  const todayCheckin = checkins.find((c) => c.log_date === todayKey) || null;
+
+  // Deliberate check-in / edit for today — the persistent path (the home surface
+  // has no check-in; the daily moment is casual). Upsert + patch local state so
+  // the tracks refresh without a refetch.
+  const saveTodayCheckin = async (values) => {
+    if (checkinSaving) return;
+    setCheckinSaving(true);
+    try {
+      const rows = await dbUpsertCheckin({ user_id: userId, log_date: todayKey, ...values }, token);
+      const saved = (Array.isArray(rows) ? rows[0] : rows) || { user_id: userId, log_date: todayKey, ...values };
+      setCheckins((cs) => [...cs.filter((c) => c.log_date !== todayKey), saved]);
+      setCheckinOpen(false);
+    } catch (e) {
+      // leave the sheet open on failure so the entry isn't lost
+    } finally {
+      setCheckinSaving(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -227,6 +250,20 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
                 <BarSeries values={o.series} height={22} />
               </View>
             ))}
+
+            {/* Persistent entry — the home has no check-in and the daily moment is
+                once-a-day, so this is where you can always log or edit today. */}
+            <Pressable
+              onPress={() => setCheckinOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={todayCheckin?.mood != null ? 'Edit today’s feeling' : 'Check in for today'}
+              style={{ marginTop: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}
+            >
+              <Text tone="secondary" size="caption">
+                {todayCheckin?.mood != null ? `today · ${FEELING_STATES[todayCheckin.mood - 1]}` : 'how do you feel today?'}
+              </Text>
+              <Text tone="tertiary" size="label">{todayCheckin?.mood != null ? 'edit ›' : 'check in ›'}</Text>
+            </Pressable>
           </View>
 
           {/* ── By time of day ── */}
@@ -252,6 +289,8 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
 
         </ScrollView>
       )}
+
+      <CheckinSheet open={checkinOpen} onClose={() => setCheckinOpen(false)} initial={todayCheckin} onSave={saveTodayCheckin} saving={checkinSaving} />
     </View>
   );
 }
