@@ -6,6 +6,7 @@ import Button from './Button';
 import Text from './Text';
 import SectionHeader from './SectionHeader';
 import HelperText from './HelperText';
+import FeelingScale from './FeelingScale';
 import { theme, spacing } from '../theme';
 
 // A 1–5 rating as a row of sharp cells, filled up to the selected level (block
@@ -69,7 +70,14 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
       }
     >
       <HelperText>a few taps a day — spot your patterns and feel more in control</HelperText>
-      <RatingRow label="feeling" value={mood} onChange={setMood} />
+
+      {/* Feeling — the settled axis (same instrument as the daily moment). */}
+      <View style={{ marginBottom: spacing.lg }}>
+        <Text style={{ marginBottom: spacing.md }}>feeling</Text>
+        <FeelingScale value={mood} onSet={setMood} />
+      </View>
+
+      {/* Optional depth. */}
       <RatingRow label="energy" value={energy} onChange={setEnergy} />
       <RatingRow label="sleep" value={sleep} onChange={setSleep} />
 
