@@ -15,17 +15,60 @@ import { isActiveSupp } from './time';
 export const TIMING_DISCLAIMER =
   'Timing guidance, not medical advice. Always confirm with your doctor or pharmacist.';
 
-// Canonical ingredients + the keywords that identify them inside a free-text
-// name (case-insensitive substring). Keep keywords specific to avoid false hits.
+// Canonical ingredients + keywords that identify them in a free-text name
+// (case-insensitive substring). Most also carry a `tip` (one-line TIMING guidance)
+// and a `tag` used to group the stack in the Interactions view — so a big regimen
+// gets a tip per item, not just the rare conflict. Timing/practical only: never
+// dosage, diagnosis, or "don't take". `tag` order is TAG_ORDER below.
 export const INGREDIENTS = [
-  { id: 'levothyroxine', label: 'levothyroxine', keywords: ['levothyroxine', 'synthroid', 'levoxyl', 'euthyrox', 'tirosint', 'unithroid', 'levoxine', 'thyroxine'] },
-  { id: 'calcium',   label: 'calcium',   keywords: ['calcium', 'cal-mag', 'calmag'] },
-  { id: 'iron',      label: 'iron',      keywords: ['iron', 'ferrous', 'ferric'] },
-  { id: 'magnesium', label: 'magnesium', keywords: ['magnesium'] },
-  { id: 'zinc',      label: 'zinc',      keywords: ['zinc'] },
-  { id: 'copper',    label: 'copper',    keywords: ['copper'] },
-  { id: 'caffeine',  label: 'coffee / caffeine', keywords: ['coffee', 'caffeine', 'espresso'] },
+  // ── take alone, on an empty stomach ──
+  { id: 'levothyroxine', label: 'levothyroxine', keywords: ['levothyroxine', 'synthroid', 'levoxyl', 'euthyrox', 'tirosint', 'unithroid', 'levoxine', 'thyroxine', 'liothyronine', 'cytomel'], tip: 'Take first thing on an empty stomach, 30–60 min before food or coffee.', tag: 'empty stomach' },
+
+  // ── fat-soluble / need a meal to absorb ──
+  { id: 'vitamin_d', label: 'vitamin D', keywords: ['vitamin d', 'vit d', 'vitamin d3', 'cholecalciferol', 'd3'], tip: 'Fat-soluble — take with a meal that has some fat.', tag: 'with food' },
+  { id: 'vitamin_k', label: 'vitamin K2', keywords: ['vitamin k', 'vit k', 'k2', 'menaquinone', 'mk-7', 'mk7'], tip: 'Fat-soluble — take with a meal (great alongside vitamin D).', tag: 'with food' },
+  { id: 'vitamin_a', label: 'vitamin A', keywords: ['vitamin a', 'retinol', 'retinyl'], tip: 'Fat-soluble — take with food.', tag: 'with food' },
+  { id: 'vitamin_e', label: 'vitamin E', keywords: ['vitamin e', 'tocopherol'], tip: 'Fat-soluble — take with food.', tag: 'with food' },
+  { id: 'omega3', label: 'omega-3 / fish oil', keywords: ['omega', 'fish oil', 'epa', 'dha', 'krill', 'cod liver'], tip: 'Take with a meal — cuts fishy burps and helps it absorb.', tag: 'with food' },
+  { id: 'coq10', label: 'CoQ10', keywords: ['coq10', 'coenzyme q10', 'ubiquinol', 'ubiquinone'], tip: 'Fat-soluble — take with a meal that has fat.', tag: 'with food' },
+  { id: 'curcumin', label: 'curcumin / turmeric', keywords: ['curcumin', 'turmeric'], tip: 'Take with food (and fat) — absorbs poorly on its own.', tag: 'with food' },
+  { id: 'selenium', label: 'selenium', keywords: ['selenium', 'selenomethionine'], tip: 'Take with food to avoid stomach upset.', tag: 'with food' },
+  { id: 'berberine', label: 'berberine', keywords: ['berberine'], tip: 'Take with meals — it acts on blood sugar around eating.', tag: 'with food' },
+  { id: 'milk_thistle', label: 'milk thistle', keywords: ['milk thistle', 'silymarin', 'cardo mariano', 'cardo mariã­'], tip: 'Take with food.', tag: 'with food' },
+  { id: 'enzymes', label: 'digestive enzymes', keywords: ['digestive enzyme', 'digest gold', 'enzima', 'enzyme', 'bromelain', 'lipase'], tip: 'Take right before or at the start of a meal.', tag: 'with food' },
+
+  // ── energizing → morning ──
+  { id: 'b_complex', label: 'B vitamins', keywords: ['b complex', 'b-complex', 'vitamin b', 'b12', 'b-12', 'methylcobalamin', 'b6', 'b1', 'thiamine', 'riboflavin', 'niacin'], tip: 'Energizing — take in the morning; late in the day it can disrupt sleep.', tag: 'morning' },
+  { id: 'vitamin_c', label: 'vitamin C', keywords: ['vitamin c', 'vit c', 'ascorbic', 'ascorbate'], tip: 'Water-soluble, anytime — pairs well with iron to boost absorption.', tag: 'morning' },
+  { id: 'rhodiola', label: 'rhodiola', keywords: ['rhodiola'], tip: 'Stimulating adaptogen — take in the morning, not at night.', tag: 'morning' },
+  { id: 'tyrosine', label: 'L-tyrosine', keywords: ['tyrosine'], tip: 'Energizing — take in the morning on an empty stomach.', tag: 'morning' },
+
+  // ── calming → night ──
+  { id: 'magnesium', label: 'magnesium', keywords: ['magnesium', 'glycinate', 'threonate'], tip: 'Calming — most people take it in the evening.', tag: 'at night' },
+  { id: 'glycine', label: 'glycine', keywords: ['glycine'], tip: 'Supports sleep — take in the evening.', tag: 'at night' },
+  { id: 'melatonin', label: 'melatonin', keywords: ['melatonin'], tip: 'Take 30–60 min before bed, same time each night.', tag: 'at night' },
+  { id: 'theanine', label: 'L-theanine', keywords: ['theanine'], tip: 'Calming — evening, or with coffee to smooth the jitters.', tag: 'at night' },
+  { id: 'ashwagandha', label: 'ashwagandha', keywords: ['ashwagandha', 'ashwaganda', 'withania'], tip: 'Often taken in the evening to wind down (fine with food).', tag: 'at night' },
+  { id: 'gaba', label: 'GABA', keywords: ['gaba'], tip: 'Calming — take in the evening.', tag: 'at night' },
+
+  // ── minerals that compete (see conflicts) ──
+  { id: 'calcium', label: 'calcium', keywords: ['calcium', 'cal-mag', 'calmag'], tip: 'Take with food, and keep it apart from iron, zinc, and thyroid meds.', tag: 'minerals' },
+  { id: 'iron', label: 'iron', keywords: ['iron', 'ferrous', 'ferric', 'bisglycinate'], tip: 'Away from coffee, tea, and calcium; vitamin C helps it absorb.', tag: 'minerals' },
+  { id: 'zinc', label: 'zinc', keywords: ['zinc'], tip: 'Take with food to avoid nausea; keep it apart from iron and calcium.', tag: 'minerals' },
+  { id: 'copper', label: 'copper', keywords: ['copper'], tip: 'Space it from zinc — they compete.', tag: 'minerals' },
+
+  // ── special cases ──
+  { id: 'fiber', label: 'fiber / psyllium', keywords: ['fiber', 'fibre', 'psyllium', 'metamucil', 'glucomannan'], tip: 'Keep fiber apart from your other supplements and meds — it can bind them.', tag: 'space from others' },
+  { id: 'biotin', label: 'biotin', keywords: ['biotin'], tip: 'Anytime — but pause it a few days before thyroid/hormone lab tests; it can skew results.', tag: 'anytime' },
+  { id: 'creatine', label: 'creatine', keywords: ['creatine'], tip: "Timing barely matters — just take it consistently every day.", tag: 'anytime' },
+  { id: 'collagen', label: 'collagen', keywords: ['collagen', 'colageno', 'peptides'], tip: 'Anytime — vitamin C helps your body use it.', tag: 'anytime' },
+  { id: 'probiotic', label: 'probiotic', keywords: ['probiotic', 'lactobacillus', 'bifido', 'kefir', 'saccharomyces'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
+  { id: 'lions_mane', label: "lion's mane", keywords: ["lion's mane", 'lions mane', 'melena de le', 'hericium'], tip: 'Anytime that suits you — be consistent.', tag: 'anytime' },
+  { id: 'caffeine', label: 'coffee / caffeine', keywords: ['coffee', 'caffeine', 'espresso'], tip: 'Keep it away from levothyroxine and iron.', tag: 'anytime' },
 ];
+
+// Group order for the "how to time your stack" section.
+export const TAG_ORDER = ['empty stomach', 'with food', 'morning', 'at night', 'minerals', 'space from others', 'anytime'];
 
 // Each rule is a timing separation between two ingredients. `note` explains the
 // WHY in one plain sentence (absorption competition) — never a directive beyond
@@ -62,14 +105,37 @@ export function coachLine(item) {
 const norm = (s) => (s || '').toLowerCase();
 const labelOf = (id) => INGREDIENTS.find((i) => i.id === id)?.label || id;
 
+// Whole-word keyword match — so short keywords ("epa", "d3", "b1") don't match
+// INSIDE unrelated words (e.g. "epa" in "tirzEPAtide"). Boundaries are non-letters.
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const hasKeyword = (name, keywords) => {
+  const n = norm(name);
+  return keywords.some((k) => new RegExp(`(^|[^a-z])${esc(k)}([^a-z]|$)`, 'i').test(n));
+};
+
 // Ingredient ids present in a free-text supplement name.
 export function detectIngredients(name) {
-  const n = norm(name);
   const ids = [];
   for (const ing of INGREDIENTS) {
-    if (ing.keywords.some((k) => n.includes(k))) ids.push(ing.id);
+    if (hasKeyword(name, ing.keywords)) ids.push(ing.id);
   }
   return ids;
+}
+
+// Per-supplement timing guidance across the WHOLE stack, grouped by tag (ordered
+// by TAG_ORDER). Every recognized item contributes its tip — so a 30-item regimen
+// gets rich, organized guidance ("take these 6 with food, these 3 at night"), not
+// just the rare conflict. De-duped by ingredient.
+export function timingTips(supps) {
+  const byTag = {};
+  for (const s of (supps || []).filter(isActiveSupp)) {
+    // One tip per item — the first ingredient it matches (so a "D3 + K2" combo
+    // gets a single, sensible line, not one per component).
+    const ing = INGREDIENTS.find((i) => i.tip && hasKeyword(s.name, i.keywords));
+    if (!ing) continue;
+    (byTag[ing.tag] ||= []).push({ id: s.id, label: ing.label, suppName: s.name, tip: ing.tip });
+  }
+  return TAG_ORDER.filter((t) => byTag[t]).map((tag) => ({ tag, items: byTag[tag] }));
 }
 
 // Scan an active regimen for timing-sensitive ingredient pairs. Returns one

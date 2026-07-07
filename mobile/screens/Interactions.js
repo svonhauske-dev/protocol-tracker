@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { findInteractions, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
+import { findInteractions, timingTips, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
 import { Heading, SectionHeader, Text, HelperText, Callout } from '../components';
 import IconButton from '../components/IconButton';
 import { theme, spacing, icon } from '../theme';
@@ -34,7 +34,9 @@ function InteractionCard({ item }) {
 export default function Interactions({ supps = [], onBack, embedded = false }) {
   const insets = useSafeAreaInsets();
   const items = useMemo(() => findInteractions(supps), [supps]);
+  const tips = useMemo(() => timingTips(supps), [supps]);
   const conflicts = items.filter((i) => i.sameSlot).length;
+  const nothing = items.length === 0 && tips.length === 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
@@ -48,23 +50,46 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
       ) : null}
 
       <ScrollView contentContainerStyle={{ paddingTop: spacing.lg, paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }}>
-        <HelperText>
-          Common absorption-timing pairs found in your regimen. {conflicts > 0 ? `${conflicts} share a slot — worth spacing out.` : 'Nothing needs moving right now.'}
-        </HelperText>
 
-        {items.length === 0 ? (
-          <View style={{ marginTop: spacing.lg }}>
-            <SectionHeader marker="//">no timing pairs found</SectionHeader>
-            <Text tone="secondary">$ nothing to space out ▌</Text>
-            <HelperText style={{ marginTop: spacing.md, marginBottom: 0 }}>
-              Origin checks a curated set of well-established timing separations (thyroid meds, calcium, iron, zinc, copper, caffeine). It isn't a complete interaction checker.
-            </HelperText>
-          </View>
-        ) : (
-          <View style={{ marginTop: spacing.sm }}>
+        {/* ── Conflicts (absorption pairs) — only when there are any ── */}
+        {items.length > 0 ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <SectionHeader>absorption conflicts</SectionHeader>
+            {conflicts > 0 ? (
+              <HelperText>{conflicts} share a slot — worth spacing out.</HelperText>
+            ) : null}
             {items.map((item) => <InteractionCard key={item.key} item={item} />)}
           </View>
-        )}
+        ) : null}
+
+        {/* ── How to time your whole stack — grouped guidance ── */}
+        {tips.length > 0 ? (
+          <View>
+            <SectionHeader>how to time your stack</SectionHeader>
+            {tips.map((group) => (
+              <View key={group.tag} style={{ marginBottom: spacing.lg }}>
+                <Text size="label" weight="semibold" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.xs }}>{group.tag}</Text>
+                {group.items.map((it) => (
+                  <View key={it.id} style={{ marginBottom: spacing.sm }}>
+                    <Text size="caption" numberOfLines={1}>{it.suppName}</Text>
+                    <Text size="caption" tone="secondary" style={{ marginTop: 2 }}>{it.tip}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* ── Nothing recognized ── */}
+        {nothing ? (
+          <View>
+            <SectionHeader marker="//">nothing to time yet</SectionHeader>
+            <Text tone="secondary">$ add items to get timing guidance ▌</Text>
+            <HelperText style={{ marginTop: spacing.md, marginBottom: 0 }}>
+              Origin recognizes common supplements and medications and gives timing guidance for each. It isn't a complete interaction checker.
+            </HelperText>
+          </View>
+        ) : null}
 
         {/* Disclaimer — the liability line, always visible. Quiet but legible. */}
         <View style={{ marginTop: spacing.lg, borderTopWidth: theme.borderWidth.default, borderTopColor: theme.border.divider, paddingTop: spacing.md }}>
