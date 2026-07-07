@@ -10,6 +10,7 @@ import {
 } from 'shared/lib/adherence';
 import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
 import { Heading, SectionHeader, Text, Meter, InlineTip, EmptyState } from '../components';
+import { FEELING_STATES } from '../components/FeelingScale';
 import IconButton from '../components/IconButton';
 import { theme, spacing, typography, icon } from '../theme';
 
@@ -125,7 +126,8 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
     }
     const worstSlot = slotRows.length ? slotRows.reduce((w, r) => (r.pct < w.pct ? r : w), slotRows[0]) : null;
 
-    // Outcomes — energy / mood / sleep as value/5 per day (null where no check-in).
+    // Outcomes — feeling is the primary track (the daily one-tap, backed by
+    // `mood`); energy & sleep are optional depth, shown only once logged.
     const ckMap = {};
     checkins.forEach((c) => { ckMap[c.log_date] = c; });
     const metric = (key) => dates.map((d) => {
@@ -137,14 +139,15 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
       const vals = checkins.map((c) => c[key]).filter((v) => v != null);
       return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : null;
     };
-    const outcomes = [
+    const hasData = (key) => checkins.some((c) => c[key] != null);
+    const feeling = { key: 'mood', label: 'feeling', series: metric('mood'), avg: avg('mood') };
+    const details = [
       { key: 'energy', label: 'energy', series: metric('energy'), avg: avg('energy') },
-      { key: 'mood', label: 'mood', series: metric('mood'), avg: avg('mood') },
       { key: 'sleep', label: 'sleep', series: metric('sleep'), avg: avg('sleep') },
-    ];
-    const hasOutcomes = checkins.length > 0;
+    ].filter((o) => hasData(o.key));
+    const hasOutcomes = hasData('mood') || details.length > 0;
 
-    return { dailyPcts, overall, suppRows, slotRows, worstSlot, outcomes, hasOutcomes };
+    return { dailyPcts, overall, suppRows, slotRows, worstSlot, feeling, details, hasOutcomes };
   }, [logs, checkins, supps, slotDefs, activeSlotIds, dates]);
 
   const startLabel = monthDay(dates[0]);
@@ -197,18 +200,31 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
           {/* ── How you feel (outcomes) ── */}
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>how you feel · last {WINDOW} days</SectionHeader>
-            {/* Always show the three tracks — empty when unlogged, so the shape is
-                visible — with a one-line prompt above until check-ins accrue. */}
+            {/* Feeling always shows (the primary track) — empty when unlogged, so
+                the shape is visible — with a one-line prompt until check-ins accrue. */}
             {!model.hasOutcomes ? (
-              <Text tone="secondary" size="caption" style={{ marginBottom: spacing.md }}>check in daily to spot your patterns — how energy, mood &amp; sleep move over time.</Text>
+              <Text tone="secondary" size="caption" style={{ marginBottom: spacing.md }}>check in daily to spot your patterns — how you feel over time.</Text>
             ) : null}
-            {model.outcomes.map((o) => (
+
+            {/* Feeling — the hero track, named in the scale's own words. */}
+            <View style={{ marginBottom: model.details.length ? spacing.lg : 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                <Text>feeling</Text>
+                <Text tone={model.feeling.avg == null ? 'tertiary' : 'primary'} weight={model.feeling.avg == null ? 'regular' : 'semibold'}>
+                  {model.feeling.avg == null ? '—' : `${FEELING_STATES[Math.max(0, Math.min(4, Math.round(model.feeling.avg) - 1))]} on average`}
+                </Text>
+              </View>
+              <BarSeries values={model.feeling.series} height={36} />
+            </View>
+
+            {/* Energy & sleep — optional depth, quieter, only once logged. */}
+            {model.details.map((o) => (
               <View key={o.key} style={{ marginBottom: spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                  <Text>{o.label}</Text>
+                  <Text size="caption" tone="secondary">{o.label}</Text>
                   <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{o.avg == null ? '—' : `${o.avg.toFixed(1)} avg`}</Text>
                 </View>
-                <BarSeries values={o.series} height={28} />
+                <BarSeries values={o.series} height={22} />
               </View>
             ))}
           </View>

@@ -67,6 +67,7 @@ import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
 import BulkAddModal from '../components/BulkAddModal';
 import CheckinSheet from '../components/CheckinSheet';
+import FeelingScale, { FEELING_STATES } from '../components/FeelingScale';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
 import { useToast } from '../components/Toast';
@@ -123,6 +124,7 @@ function Avatar({ initial, onPress }) {
 
 // Compact 1–5 rating for the home check-in card — the "5-second" input. Block
 // cells, tap to set (tap current to clear), 44pt hit area via hitSlop.
+// Compact 1–5 bar rating — the optional-detail metrics (energy, sleep).
 function FastRating({ label, value, onSet }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
@@ -185,6 +187,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   const [checkinByDate, setCheckinByDate] = useState({}); // dk → checkin row (or null once fetched)
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinSaving, setCheckinSaving] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false); // "+ details" reveals energy/sleep/note
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -1272,18 +1275,43 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
           auto-saves, with the streak (progress = the #1 retention driver). Past
           days: a compact summary that opens the sheet. Hidden on future days. */}
       {isFuture ? null : isToday ? (
+        (() => {
+          // Show the optional metrics if the user opened them OR already has data.
+          const showDetails = detailsOpen || dayCheckin?.energy != null || dayCheckin?.sleep != null;
+          return (
         <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase' }}>// how you feel</Text>
-            <Pressable onPress={() => setCheckinOpen(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Check-in details and note" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               {checkinStreak >= 2 ? <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary }}>{checkinStreak}-day streak</Text> : null}
-              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note ›' : '+ note ›'}</Text>
-            </Pressable>
+              {!showDetails ? (
+                <Pressable onPress={() => setDetailsOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="Add details — energy, sleep, and a note">
+                  <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>+ details ›</Text>
+                </Pressable>
+              ) : (dayCheckin?.energy == null && dayCheckin?.sleep == null) ? (
+                <Pressable onPress={() => setDetailsOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="Hide details">
+                  <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>hide ›</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
-          <FastRating label="energy" value={dayCheckin?.energy} onSet={(v) => quickSaveCheckin('energy', v)} />
-          <FastRating label="mood" value={dayCheckin?.mood} onSet={(v) => quickSaveCheckin('mood', v)} />
-          <FastRating label="sleep" value={dayCheckin?.sleep} onSet={(v) => quickSaveCheckin('sleep', v)} />
+
+          {/* The 5-second action — one tap on how you feel today. */}
+          <FeelingScale value={dayCheckin?.mood} onSet={(v) => quickSaveCheckin('mood', v)} />
+
+          {/* Optional depth — energy, sleep, and a note. Collapsed by default. */}
+          {showDetails ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <FastRating label="energy" value={dayCheckin?.energy} onSet={(v) => quickSaveCheckin('energy', v)} />
+              <FastRating label="sleep" value={dayCheckin?.sleep} onSet={(v) => quickSaveCheckin('sleep', v)} />
+              <Pressable onPress={() => setCheckinOpen(true)} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button" accessibilityLabel="Add a note" style={{ marginTop: spacing.xxs }}>
+                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note ›' : '+ note ›'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
+          );
+        })()
       ) : (
         <Pressable
           onPress={() => setCheckinOpen(true)}
@@ -1295,7 +1323,14 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
             <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.xxs }}>// how you feel</Text>
             {dayCheckin ? (
               <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>
-                {`energy ${dayCheckin.energy ?? '—'} · mood ${dayCheckin.mood ?? '—'} · sleep ${dayCheckin.sleep ?? '—'}${dayCheckin.note ? ' · note' : ''}`}
+                {(() => {
+                  const parts = [];
+                  if (dayCheckin.mood != null) parts.push(FEELING_STATES[dayCheckin.mood - 1]);
+                  if (dayCheckin.energy != null) parts.push(`energy ${dayCheckin.energy}`);
+                  if (dayCheckin.sleep != null) parts.push(`sleep ${dayCheckin.sleep}`);
+                  if (dayCheckin.note) parts.push('note');
+                  return parts.join(' · ') || '—';
+                })()}
               </Text>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1334,7 +1369,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
               explains why the Insights icon went amber (otherwise cryptic). */}
           {hasTimingConflict && !isPast && !isFuture && !readOnly ? (
             <View style={{ marginBottom: spacing.md }}>
-              <InlineTip id="timing-conflict" label="interactions">two of your items compete for absorption at the same time — see insights › interactions.</InlineTip>
+              <InlineTip id="timing-conflict" label="interactions">two of your items compete for absorption at the same time — see insights › guidance.</InlineTip>
             </View>
           ) : null}
           {!isPast && !isFuture && !readOnly && hasMultiSuppSlot ? (

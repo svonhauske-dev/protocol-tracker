@@ -69,8 +69,8 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
       }
     >
       <HelperText>a few taps a day — spot your patterns and feel more in control</HelperText>
+      <RatingRow label="feeling" value={mood} onChange={setMood} />
       <RatingRow label="energy" value={energy} onChange={setEnergy} />
-      <RatingRow label="mood" value={mood} onChange={setMood} />
       <RatingRow label="sleep" value={sleep} onChange={setSleep} />
 
       <View style={{ marginTop: spacing.xs }}>

@@ -24,7 +24,7 @@ const REPORT_WINDOW = 90; // days
 // urgent case, and `initialTab` opens straight to timing when a conflict exists.
 const TABS = [
   { value: 'adherence', label: 'adherence' },
-  { value: 'interactions', label: 'interactions' },
+  { value: 'interactions', label: 'guidance' },
 ];
 
 export default function Insights({ supps = [], activeSlotIds, slotDefs = [], userId, token, profile, scheduleMode, onBack, initialTab = 'adherence' }) {
