@@ -46,6 +46,10 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Origin reads your sleep and recovery (HRV, resting heart rate) to show how your protocol tracks against how you feel. This data stays on your device.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Origin can save your daily check-in to Health.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UILaunchStoryboardName</key>
