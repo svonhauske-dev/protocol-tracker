@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { View, ScrollView } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, X } from 'lucide-react-native';
 import { findInteractions, timingTips, movers, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
 import { Heading, SectionHeader, Text, HelperText, Callout } from '../components';
 import IconButton from '../components/IconButton';
@@ -37,6 +37,19 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
   const tips = useMemo(() => timingTips(supps), [supps]);
   const mv = useMemo(() => movers(supps), [supps]);
   const conflicts = items.filter((i) => i.sameSlot).length;
+
+  // "Worth moving" nudges are dismissable — if you've deliberately kept an item
+  // where it is, a permanent amber flag just nags. Dismissals persist per item.
+  const [dismissed, setDismissed] = useState(() => {
+    try { return new Set(JSON.parse(global.localStorage.getItem('dismissed_movers') || '[]')); }
+    catch { return new Set(); }
+  });
+  const dismissMover = (id) => setDismissed((prev) => {
+    const next = new Set(prev); next.add(id);
+    try { global.localStorage.setItem('dismissed_movers', JSON.stringify([...next])); } catch {}
+    return next;
+  });
+  const mvVisible = mv.filter((it) => !dismissed.has(it.id));
   const nothing = items.length === 0 && tips.length === 0;
 
   return (
@@ -64,13 +77,26 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
         ) : null}
 
         {/* ── Worth moving — items scheduled against their ideal timing ── */}
-        {mv.length > 0 ? (
+        {mvVisible.length > 0 ? (
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>worth moving</SectionHeader>
-            {mv.map((it) => (
+            {mvVisible.map((it) => (
               <Callout key={it.id} tone="warning" style={{ marginBottom: spacing.sm }}>
-                <Text weight="semibold" numberOfLines={1}>{it.suppName}</Text>
-                <Text size="caption" style={{ color: theme.status.warning, marginTop: 2 }}>{it.move}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text weight="semibold" numberOfLines={1}>{it.suppName}</Text>
+                    <Text size="caption" style={{ color: theme.status.warning, marginTop: 2 }}>{it.move}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => dismissMover(it.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Dismiss the suggestion to move ${it.suppName}`}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={{ marginLeft: spacing.sm, marginTop: 1 }}
+                  >
+                    <X size={icon.sm} color={theme.text.tertiary} />
+                  </Pressable>
+                </View>
               </Callout>
             ))}
           </View>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Library, Plus, Pencil, Activity } from 'lucide-react-native';
+import { Library, Plus, Pencil, TrendingUp } from 'lucide-react-native';
 import {
   dbGetProtocols,
   dbAddProtocol,
@@ -1191,7 +1191,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <IconButton label="Open Library" onPress={() => setShowLibrary(true)}><Library size={iconSize.sm} strokeWidth={1.5} color={theme.text.secondary} /></IconButton>
-          <IconButton label="Insights" onPress={() => { if (requirePro('Insights')) setShowInsights(true); }}><Activity size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
+          <IconButton label="Insights" onPress={() => { if (requirePro('Insights')) setShowInsights(true); }}><TrendingUp size={iconSize.sm} strokeWidth={1.5} color={hasTimingConflict ? theme.status.warning : theme.text.secondary} /></IconButton>
           {isPast ? (
             <IconButton label={pastDayEditing ? 'Done editing' : 'Edit past day'} onPress={() => setPastDayEditing((e) => !e)}>
               {pastDayEditing ? <Text size="label" weight="semibold">Done</Text> : <Pencil size={iconSize.xs} strokeWidth={1.5} color={theme.text.secondary} />}
