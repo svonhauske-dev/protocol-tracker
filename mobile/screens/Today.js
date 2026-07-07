@@ -29,6 +29,7 @@ import {
   recomputeNotifications,
   dbGetCheckin,
   dbUpsertCheckin,
+  dbGetCheckinsRange,
   supa,
 } from 'shared/lib/api';
 import {
@@ -117,6 +118,31 @@ function Avatar({ initial, onPress }) {
     >
       <Text weight="medium" size="body">{initial}</Text>
     </Pressable>
+  );
+}
+
+// Compact 1–5 rating for the home check-in card — the "5-second" input. Block
+// cells, tap to set (tap current to clear), 44pt hit area via hitSlop.
+function FastRating({ label, value, onSet }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+      <Text style={{ width: 54, fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary }}>{label}</Text>
+      <View style={{ flexDirection: 'row', gap: spacing.xxs, flex: 1 }}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const filled = value != null && n <= value;
+          return (
+            <Pressable
+              key={n}
+              onPress={() => onSet(value === n ? null : n)}
+              accessibilityRole="button"
+              accessibilityLabel={`${label} ${n} of 5`}
+              hitSlop={{ top: 10, bottom: 10 }}
+              style={{ flex: 1, height: 24, borderWidth: theme.borderWidth.default, borderColor: filled ? theme.text.primary : theme.border.subtle, backgroundColor: filled ? theme.text.primary : 'transparent' }}
+            />
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -521,6 +547,40 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
       .then((rows) => setCheckinByDate((m) => ({ ...m, [dk]: (Array.isArray(rows) ? rows[0] : rows) || null })))
       .catch(() => setCheckinByDate((m) => ({ ...m, [dk]: null })));
   }, [dk]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check-in streak (progress visibility — the strongest retention driver). Set
+  // of log_dates that have a check-in, loaded once; streak = consecutive days
+  // ending today (today not-yet-logged doesn't break it).
+  const [checkinDays, setCheckinDays] = useState(null);
+  useEffect(() => {
+    const start = new Date(TODAY); start.setDate(start.getDate() - 60);
+    dbGetCheckinsRange(user.id, dateKey(start), dateKey(TODAY), token())
+      .then((rows) => setCheckinDays(new Set((rows || []).filter((c) => c.energy != null || c.mood != null || c.sleep != null).map((c) => c.log_date))))
+      .catch(() => setCheckinDays(new Set()));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const checkinStreak = useMemo(() => {
+    if (!checkinDays) return 0;
+    let streak = 0; const d = new Date(TODAY);
+    if (!checkinDays.has(dateKey(d))) d.setDate(d.getDate() - 1);
+    while (checkinDays.has(dateKey(d))) { streak++; d.setDate(d.getDate() - 1); }
+    return streak;
+  }, [checkinDays]);
+
+  // Inline 5-second save — optimistic + debounced upsert (three quick taps = one
+  // write). No modal, no save button; the note stays in the sheet.
+  const quickSaveTimer = useRef(null);
+  const quickSaveCheckin = (key, v) => {
+    const base = dayCheckin || { energy: null, mood: null, sleep: null, note: '' };
+    const merged = { ...base, user_id: user.id, log_date: dk, [key]: v };
+    setCheckinByDate((m) => ({ ...m, [dk]: merged }));
+    if (v != null) setCheckinDays((s) => { const n = new Set(s || []); n.add(dk); return n; });
+    clearTimeout(quickSaveTimer.current);
+    quickSaveTimer.current = setTimeout(() => {
+      dbUpsertCheckin({ user_id: user.id, log_date: dk, energy: merged.energy, mood: merged.mood, sleep: merged.sleep, note: merged.note || '' }, token())
+        .then(() => track('checkin_logged', { energy: merged.energy, mood: merged.mood, sleep: merged.sleep, hasNote: !!merged.note }))
+        .catch(() => {});
+    }, 700);
+  };
 
   async function saveCheckin(values) {
     if (checkinSaving) return;
@@ -1208,9 +1268,23 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
         onEditAnchor={onEditAnchor}
       />
 
-      {/* Daily outcomes check-in — the retention loop. Prompt when not done,
-          summary when done. Hidden on future days. */}
-      {!isFuture ? (
+      {/* Daily check-in — the retention loop. Today: inline 5-second rating that
+          auto-saves, with the streak (progress = the #1 retention driver). Past
+          days: a compact summary that opens the sheet. Hidden on future days. */}
+      {isFuture ? null : isToday ? (
+        <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.md, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+            <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase' }}>// how you feel</Text>
+            {checkinStreak >= 2 ? <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary }}>{checkinStreak}-day streak</Text> : null}
+          </View>
+          <FastRating label="energy" value={dayCheckin?.energy} onSet={(v) => quickSaveCheckin('energy', v)} />
+          <FastRating label="mood" value={dayCheckin?.mood} onSet={(v) => quickSaveCheckin('mood', v)} />
+          <FastRating label="sleep" value={dayCheckin?.sleep} onSet={(v) => quickSaveCheckin('sleep', v)} />
+          <Pressable onPress={() => setCheckinOpen(true)} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button" accessibilityLabel="Add a note" style={{ marginTop: spacing.xxs, alignSelf: 'flex-start' }}>
+            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note added · edit' : '+ add a note'} ›</Text>
+          </Pressable>
+        </View>
+      ) : (
         <Pressable
           onPress={() => setCheckinOpen(true)}
           accessibilityRole="button"
@@ -1225,14 +1299,14 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
               </Text>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ how do you feel today?</Text>
+                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ how did you feel?</Text>
                 <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
               </View>
             )}
           </View>
           <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginLeft: spacing.sm }}>{dayCheckin ? 'edit' : 'check in'} ›</Text>
         </Pressable>
-      ) : null}
+      )}
 
       {/* Floating slot cards — no outer wrapper; each card sits on the canvas. */}
       {homeSupps.length === 0 ? (
