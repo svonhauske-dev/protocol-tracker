@@ -25,6 +25,7 @@ export const INGREDIENTS = [
   { id: 'levothyroxine', label: 'levothyroxine', keywords: ['levothyroxine', 'synthroid', 'levoxyl', 'euthyrox', 'tirosint', 'unithroid', 'levoxine', 'thyroxine', 'liothyronine', 'cytomel'], tip: 'Take first thing on an empty stomach, 30–60 min before food or coffee.', tag: 'empty stomach' },
   { id: 'alpha_lipoic', label: 'alpha-lipoic acid', keywords: ['alpha-lipoic', 'alpha lipoic', 'lipoic'], tip: 'Absorbs best on an empty stomach — ~30 min before food.', tag: 'empty stomach' },
   { id: 'ppi', label: 'acid reducer (PPI)', keywords: ['omeprazole', 'esomeprazole', 'pantoprazole', 'lansoprazole', 'prilosec', 'nexium'], tip: 'Take 30–60 min before your first meal of the day.', tag: 'empty stomach' },
+  { id: 'uc2', label: 'UC-II collagen', keywords: ['uc-ii', 'uc ii', 'uc2', 'undenatured'], tip: 'Take on an empty stomach — many take it before bed; food can blunt it.', tag: 'empty stomach' },
 
   // ── fat-soluble / need a meal to absorb ──
   { id: 'vitamin_d', label: 'vitamin D', keywords: ['vitamin d', 'vit d', 'vitamin d3', 'cholecalciferol', 'd3'], tip: 'Fat-soluble — take with a meal that has some fat.', tag: 'with food' },
@@ -37,7 +38,7 @@ export const INGREDIENTS = [
   { id: 'selenium', label: 'selenium', keywords: ['selenium', 'selenomethionine'], tip: 'Take with food to avoid stomach upset.', tag: 'with food' },
   { id: 'berberine', label: 'berberine', keywords: ['berberine'], tip: 'Take with meals — it acts on blood sugar around eating.', tag: 'with food' },
   { id: 'milk_thistle', label: 'milk thistle', keywords: ['milk thistle', 'silymarin', 'cardo mariano', 'cardo mariã­'], tip: 'Take with food.', tag: 'with food' },
-  { id: 'enzymes', label: 'digestive enzymes', keywords: ['digestive enzyme', 'digest gold', 'enzima', 'enzyme', 'bromelain', 'lipase'], tip: 'Take right before or at the start of a meal.', tag: 'with food' },
+  { id: 'enzymes', label: 'digestive enzymes', keywords: ['digestive enzyme', 'digest gold', 'enzima', 'enzimas', 'enzyme', 'enzymes', 'bio-gest', 'biogest', 'bromelain', 'lipase'], tip: 'Take right before or at the start of a meal.', tag: 'with food' },
   { id: 'multivitamin', label: 'multivitamin', keywords: ['multivitamin', 'multi vitamin', 'multi-vitamin', 'daily multi', 'one daily', 'centrum'], tip: 'Take with a meal — the fat-soluble vitamins in it need food.', tag: 'with food' },
   { id: 'astaxanthin', label: 'astaxanthin', keywords: ['astaxanthin'], tip: 'Fat-soluble — take with a meal that has fat.', tag: 'with food' },
   { id: 'lutein', label: 'lutein / zeaxanthin', keywords: ['lutein', 'zeaxanthin'], tip: 'Fat-soluble — take with food.', tag: 'with food' },
@@ -51,9 +52,17 @@ export const INGREDIENTS = [
   { id: 'bacopa', label: 'bacopa', keywords: ['bacopa', 'brahmi'], tip: 'Take with food — it can upset an empty stomach.', tag: 'with food' },
   { id: 'metformin', label: 'metformin', keywords: ['metformin', 'glucophage'], tip: 'Take with meals to ease stomach upset.', tag: 'with food' },
 
+  { id: 'allopurinol', label: 'allopurinol', keywords: ['allopurinol', 'alopurinol', 'alpurinol', 'alupurinol', 'alpurinon', 'zyloprim', 'zyloric'], tip: 'Take after a meal to ease stomach upset, with plenty of water.', tag: 'with food' },
+  { id: 'apple_cider_vinegar', label: 'apple cider vinegar', keywords: ['apple cider vinegar', 'acv', 'vinagre de manzana'], tip: 'Dilute well in water and sip before a meal — never straight; it can harm teeth and throat.', tag: 'with food' },
+  { id: 'caprylic', label: 'caprylic acid', keywords: ['caprylate', 'caprylic', 'caprilico'], tip: 'Take with meals.', tag: 'with food' },
+  { id: 'isotretinoin', label: 'isotretinoin', keywords: ['isotretinoin', 'isotretinoina', 'isoface', 'accutane', 'roaccutane', 'absorica', 'claravis'], tip: 'Take with a meal that has fat — it needs dietary fat to absorb.', tag: 'with food' },
+  { id: 'urolithin', label: 'urolithin A', keywords: ['urolithin', 'mitopure'], tip: 'Take with a meal.', tag: 'with food' },
+  { id: 'polyphenol', label: 'polyphenols', keywords: ['polyphenol', 'polifenol'], tip: 'Take with food.', tag: 'with food' },
+  { id: 'trace_minerals', label: 'trace minerals', keywords: ['trace mineral'], tip: 'Take with food.', tag: 'with food' },
+
   // ── energizing → morning ──
-  { id: 'b_complex', label: 'B vitamins', keywords: ['b complex', 'b-complex', 'vitamin b', 'b12', 'b-12', 'methylcobalamin', 'b6', 'b1', 'thiamine', 'riboflavin', 'niacin'], tip: 'Energizing — take in the morning; late in the day it can disrupt sleep.', tag: 'morning' },
-  { id: 'vitamin_c', label: 'vitamin C', keywords: ['vitamin c', 'vit c', 'ascorbic', 'ascorbate'], tip: 'Water-soluble, anytime — pairs well with iron to boost absorption.', tag: 'morning' },
+  { id: 'b_complex', label: 'B vitamins', keywords: ['b complex', 'b-complex', 'vitamin b', 'b12', 'b-12', 'methylcobalamin', 'methylcobalamina', 'metilcobalamina', 'cobalamina', 'b6', 'b1', 'thiamine', 'riboflavin', 'niacin'], tip: 'Energizing — take in the morning; late in the day it can disrupt sleep.', tag: 'morning' },
+  { id: 'vitamin_c', label: 'vitamin C', keywords: ['vitamin c', 'vit c', 'vitamina c', 'ascorbic', 'ascorbico', 'ascorbate'], tip: 'Water-soluble, anytime — pairs well with iron to boost absorption.', tag: 'morning' },
   { id: 'rhodiola', label: 'rhodiola', keywords: ['rhodiola'], tip: 'Stimulating adaptogen — take in the morning, not at night.', tag: 'morning' },
   { id: 'tyrosine', label: 'L-tyrosine', keywords: ['tyrosine'], tip: 'Energizing — take in the morning on an empty stomach.', tag: 'morning' },
   { id: 'ginseng', label: 'ginseng', keywords: ['ginseng', 'panax', 'eleuthero'], tip: 'Energizing — take in the morning, not at night.', tag: 'morning' },
@@ -64,8 +73,12 @@ export const INGREDIENTS = [
   { id: 'nad', label: 'NMN / NR', keywords: ['nmn', 'nicotinamide riboside', 'nad+'], tip: 'Take in the morning — it can be mildly energizing.', tag: 'morning' },
   { id: 'sam_e', label: 'SAM-e', keywords: ['sam-e', 'ademetionine'], tip: 'Take in the morning on an empty stomach.', tag: 'morning' },
 
+  { id: 'licorice', label: 'licorice root', keywords: ['licorice', 'liquorice', 'glycyrrhiza', 'regaliz', 'orozuz'], tip: 'Take earlier in the day.', tag: 'morning' },
+  { id: 'methyl_guard', label: 'methylation support', keywords: ['methyl-guard', 'methyl guard', 'methyl gard', 'methyl gards', 'methylguard'], tip: 'Contains B vitamins — take earlier in the day.', tag: 'morning' },
+  { id: 'methylene_blue', label: 'methylene blue', keywords: ['methylene blue', 'methylene', 'azul de metileno'], tip: 'Mildly energizing — take earlier in the day, not near bedtime.', tag: 'morning' },
+
   // ── calming → night ──
-  { id: 'magnesium', label: 'magnesium', keywords: ['magnesium', 'glycinate', 'threonate'], tip: 'Calming — most people take it in the evening.', tag: 'at night' },
+  { id: 'magnesium', label: 'magnesium', keywords: ['magnesium', 'magnesio', 'glycinate', 'glicinato', 'threonate', 'l-threonate', 'neuromag', 'magtein'], tip: 'Calming — most people take it in the evening.', tag: 'at night' },
   { id: 'glycine', label: 'glycine', keywords: ['glycine'], tip: 'Supports sleep — take in the evening.', tag: 'at night' },
   { id: 'melatonin', label: 'melatonin', keywords: ['melatonin'], tip: 'Take 30–60 min before bed, same time each night.', tag: 'at night' },
   { id: 'theanine', label: 'L-theanine', keywords: ['theanine'], tip: 'Calming — evening, or with coffee to smooth the jitters.', tag: 'at night' },
@@ -75,23 +88,23 @@ export const INGREDIENTS = [
   { id: 'tryptophan', label: 'L-tryptophan', keywords: ['tryptophan'], tip: 'Take in the evening.', tag: 'at night' },
   { id: 'valerian', label: 'valerian', keywords: ['valerian'], tip: 'Sedating — take shortly before bed.', tag: 'at night' },
   { id: 'calming_herbs', label: 'calming herbs', keywords: ['chamomile', 'passionflower', 'lemon balm', 'melissa'], tip: 'Calming — take in the evening.', tag: 'at night' },
-  { id: 'inositol', label: 'inositol', keywords: ['inositol'], tip: 'Often taken in the evening for calm and sleep.', tag: 'at night' },
+  { id: 'inositol', label: 'inositol', keywords: ['inositol', 'myo-inositol', 'sensitol'], tip: 'Often taken in the evening for calm and sleep.', tag: 'at night' },
   { id: 'taurine', label: 'taurine', keywords: ['taurine'], tip: 'Calming — many take it in the evening.', tag: 'at night' },
   { id: 'progesterone', label: 'progesterone', keywords: ['progesterone', 'prometrium'], tip: 'Usually taken at bedtime — it can make you drowsy.', tag: 'at night' },
 
   // ── minerals that compete (see conflicts) ──
   { id: 'calcium', label: 'calcium', keywords: ['calcium', 'cal-mag', 'calmag'], tip: 'Take with food, and keep it apart from iron, zinc, and thyroid meds.', tag: 'minerals' },
-  { id: 'iron', label: 'iron', keywords: ['iron', 'ferrous', 'ferric', 'bisglycinate'], tip: 'Away from coffee, tea, and calcium; vitamin C helps it absorb.', tag: 'minerals' },
+  { id: 'iron', label: 'iron', keywords: ['iron', 'hierro', 'ferrous', 'ferric', 'ferrexel', 'bisglycinate'], tip: 'Away from coffee, tea, and calcium; vitamin C helps it absorb.', tag: 'minerals' },
   { id: 'zinc', label: 'zinc', keywords: ['zinc'], tip: 'Take with food to avoid nausea; keep it apart from iron and calcium.', tag: 'minerals' },
   { id: 'copper', label: 'copper', keywords: ['copper'], tip: 'Space it from zinc — they compete.', tag: 'minerals' },
 
   // ── special cases ──
-  { id: 'fiber', label: 'fiber / psyllium', keywords: ['fiber', 'fibre', 'psyllium', 'metamucil', 'glucomannan'], tip: 'Keep fiber apart from your other supplements and meds — it can bind them.', tag: 'space from others' },
+  { id: 'fiber', label: 'fiber / psyllium', keywords: ['fiber', 'fibra', 'fibre', 'psyllium', 'metamucil', 'metamucill', 'glucomannan'], tip: 'Keep fiber apart from your other supplements and meds — it can bind them.', tag: 'space from others' },
   { id: 'charcoal', label: 'activated charcoal', keywords: ['activated charcoal', 'charcoal'], tip: 'Binds almost everything — keep it hours away from your supplements and meds.', tag: 'space from others' },
   { id: 'biotin', label: 'biotin', keywords: ['biotin'], tip: 'Anytime — but pause it a few days before thyroid/hormone lab tests; it can skew results.', tag: 'anytime' },
   { id: 'creatine', label: 'creatine', keywords: ['creatine'], tip: "Timing barely matters — just take it consistently every day.", tag: 'anytime' },
   { id: 'collagen', label: 'collagen', keywords: ['collagen', 'colageno', 'peptides'], tip: 'Anytime — vitamin C helps your body use it.', tag: 'anytime' },
-  { id: 'probiotic', label: 'probiotic', keywords: ['probiotic', 'lactobacillus', 'bifido', 'kefir', 'saccharomyces'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
+  { id: 'probiotic', label: 'probiotic', keywords: ['probiotic', 'probiotico', 'lactobacillus', 'bifido', 'kefir', 'saccharomyces', 'akkermansia', 'metabolic daily', 'ultrabiotic', 'microbiot', 'microbiotfit'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
   { id: 'lions_mane', label: "lion's mane", keywords: ["lion's mane", 'lions mane', 'melena de le', 'hericium'], tip: 'Anytime that suits you — be consistent.', tag: 'anytime' },
   { id: 'caffeine', label: 'coffee / caffeine', keywords: ['coffee', 'caffeine', 'espresso'], tip: 'Keep it away from levothyroxine and iron.', tag: 'anytime' },
   { id: 'nac', label: 'NAC', keywords: ['nac', 'n-acetyl', 'acetylcysteine'], tip: 'Anytime — some prefer it away from food.', tag: 'anytime' },
@@ -100,7 +113,7 @@ export const INGREDIENTS = [
   { id: 'lysine', label: 'L-lysine', keywords: ['lysine'], tip: 'Take on an empty stomach for best absorption.', tag: 'anytime' },
   { id: 'beta_alanine', label: 'beta-alanine', keywords: ['beta-alanine', 'beta alanine'], tip: 'Anytime — split doses if the tingles bother you.', tag: 'anytime' },
   { id: 'citrulline', label: 'citrulline', keywords: ['citrulline'], tip: 'Take ~30–60 min before a workout, or anytime.', tag: 'anytime' },
-  { id: 'bcaa', label: 'BCAAs / EAAs', keywords: ['bcaa', 'eaa', 'branched-chain'], tip: 'Around workouts, or anytime.', tag: 'anytime' },
+  { id: 'bcaa', label: 'BCAAs / EAAs', keywords: ['bcaa', 'bcaas', 'eaa', 'eaas', 'branched-chain', 'branched chain'], tip: 'Around workouts, or anytime.', tag: 'anytime' },
   { id: 'hyaluronic', label: 'hyaluronic acid', keywords: ['hyaluronic'], tip: 'Anytime — be consistent.', tag: 'anytime' },
   { id: 'spermidine', label: 'spermidine', keywords: ['spermidine'], tip: 'Anytime — be consistent.', tag: 'anytime' },
   { id: 'pqq', label: 'PQQ', keywords: ['pqq'], tip: 'Anytime — often paired with CoQ10.', tag: 'anytime' },
@@ -110,9 +123,12 @@ export const INGREDIENTS = [
   { id: 'holy_basil', label: 'holy basil / tulsi', keywords: ['holy basil', 'tulsi'], tip: 'Adaptogen — anytime, be consistent.', tag: 'anytime' },
   { id: 'dim', label: 'DIM', keywords: ['diindolylmethane', 'indole-3', 'dim'], tip: 'Take with food; supports estrogen balance.', tag: 'anytime' },
   { id: 'statin', label: 'statin', keywords: ['atorvastatin', 'rosuvastatin', 'simvastatin', 'lipitor', 'crestor'], tip: 'Take at the same time each day — some are best in the evening.', tag: 'anytime' },
-  { id: 'glp1', label: 'GLP-1 (weekly)', keywords: ['semaglutide', 'tirzepatide', 'ozempic', 'wegovy', 'mounjaro', 'zepbound', 'rybelsus'], tip: 'Weekly injection — take it on the same day each week.', tag: 'anytime' },
+  { id: 'glp1', label: 'GLP-1 (weekly)', keywords: ['semaglutide', 'tirzepatide', 'ozempic', 'wegovy', 'mounjaro', 'zepbound', 'rybelsus', 'retatrutide', 'reta'], tip: 'Weekly injection — take it on the same day each week.', tag: 'anytime' },
   { id: 'testosterone', label: 'testosterone', keywords: ['testosterone', 'trt', 'cypionate', 'enanthate'], tip: 'Follow your prescribed schedule and keep the timing consistent.', tag: 'anytime' },
   { id: 'estradiol', label: 'estradiol', keywords: ['estradiol', 'estrogen'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
+  { id: 'gabapentin', label: 'gabapentin', keywords: ['gabapentin', 'gabapentina', 'gabspentina', 'neurontin'], tip: 'Follow your prescribed schedule; it can be sedating, so many take a dose later in the day.', tag: 'anytime' },
+  { id: 'dutasteride', label: 'dutasteride', keywords: ['dutasteride', 'avodart'], tip: 'Take at the same time each day, with or without food.', tag: 'anytime' },
+  { id: 'telmisartan', label: 'telmisartan', keywords: ['telmisartan', 'micardis'], tip: 'Take at the same time each day.', tag: 'anytime' },
 ];
 
 // Group order for the "how to time your stack" section.
@@ -129,6 +145,7 @@ export const RULES = [
   { a: 'levothyroxine', b: 'iron',      sep: '4 hours',    anchor: 'a', note: 'Iron binds levothyroxine and reduces its absorption.' },
   { a: 'levothyroxine', b: 'magnesium', sep: '4 hours',    anchor: 'a', note: 'Magnesium can reduce levothyroxine absorption.' },
   { a: 'levothyroxine', b: 'caffeine',  sep: '30–60 min',  anchor: 'a', note: 'Coffee can cut levothyroxine absorption — take it on an empty stomach first.' },
+  { a: 'levothyroxine', b: 'fiber',     sep: '4 hours',    anchor: 'a', note: 'Fiber like psyllium can bind levothyroxine and reduce its absorption.' },
   { a: 'calcium',       b: 'iron',      sep: '2 hours',    note: 'Calcium and iron compete for absorption.' },
   { a: 'zinc',          b: 'iron',      sep: '2 hours',    note: 'Zinc and iron compete for absorption.' },
   { a: 'zinc',          b: 'calcium',   sep: '2 hours',    note: 'Calcium can reduce zinc absorption.' },
@@ -150,15 +167,20 @@ export function coachLine(item) {
   return `Take them at different meals — at least ${item.sep} apart.`;
 }
 
-const norm = (s) => (s || '').toLowerCase();
+// Lowercase + strip accents, so Spanish / accented names match ASCII keywords
+// (e.g. "Magnésio", "Melena de León", "Ácido ascórbico", "Alpuriñon").
+const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const labelOf = (id) => INGREDIENTS.find((i) => i.id === id)?.label || id;
 
 // Whole-word keyword match — so short keywords ("epa", "d3", "b1") don't match
 // INSIDE unrelated words (e.g. "epa" in "tirzEPAtide"). Boundaries are non-letters.
+// A trailing plural "s" is tolerated ("Enzymes"→"enzyme", "BCAAs"→"bcaa",
+// "Trace Minerals"→"trace mineral") — it only affects the word END, so the
+// "epa"/"tirzEPAtide" guard (a START boundary) is unaffected.
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const hasKeyword = (name, keywords) => {
   const n = norm(name);
-  return keywords.some((k) => new RegExp(`(^|[^a-z])${esc(k)}([^a-z]|$)`, 'i').test(n));
+  return keywords.some((k) => new RegExp(`(^|[^a-z])${esc(k)}s?([^a-z]|$)`, 'i').test(n));
 };
 
 // Ingredient ids present in a free-text supplement name.
