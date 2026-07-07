@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
-import { findInteractions, timingTips, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
+import { findInteractions, timingTips, movers, coachLine, TIMING_DISCLAIMER } from 'shared/lib/interactions';
 import { Heading, SectionHeader, Text, HelperText, Callout } from '../components';
 import IconButton from '../components/IconButton';
 import { theme, spacing, icon } from '../theme';
@@ -35,6 +35,7 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
   const insets = useSafeAreaInsets();
   const items = useMemo(() => findInteractions(supps), [supps]);
   const tips = useMemo(() => timingTips(supps), [supps]);
+  const mv = useMemo(() => movers(supps), [supps]);
   const conflicts = items.filter((i) => i.sameSlot).length;
   const nothing = items.length === 0 && tips.length === 0;
 
@@ -62,6 +63,19 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
           </View>
         ) : null}
 
+        {/* ── Worth moving — items scheduled against their ideal timing ── */}
+        {mv.length > 0 ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <SectionHeader>worth moving</SectionHeader>
+            {mv.map((it) => (
+              <Callout key={it.id} tone="warning" style={{ marginBottom: spacing.sm }}>
+                <Text weight="semibold" numberOfLines={1}>{it.suppName}</Text>
+                <Text size="caption" style={{ color: theme.status.warning, marginTop: 2 }}>{it.move}</Text>
+              </Callout>
+            ))}
+          </View>
+        ) : null}
+
         {/* ── How to time your whole stack — grouped guidance ── */}
         {tips.length > 0 ? (
           <View>
@@ -73,6 +87,7 @@ export default function Interactions({ supps = [], onBack, embedded = false }) {
                   <View key={it.id} style={{ marginBottom: spacing.sm }}>
                     <Text size="caption" numberOfLines={1}>{it.suppName}</Text>
                     <Text size="caption" tone="secondary" style={{ marginTop: 2 }}>{it.tip}</Text>
+                    {it.move ? <Text size="caption" style={{ color: theme.status.warning, marginTop: 2 }}>→ {it.move}</Text> : null}
                   </View>
                 ))}
               </View>

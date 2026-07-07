@@ -23,6 +23,8 @@ export const TIMING_DISCLAIMER =
 export const INGREDIENTS = [
   // ── take alone, on an empty stomach ──
   { id: 'levothyroxine', label: 'levothyroxine', keywords: ['levothyroxine', 'synthroid', 'levoxyl', 'euthyrox', 'tirosint', 'unithroid', 'levoxine', 'thyroxine', 'liothyronine', 'cytomel'], tip: 'Take first thing on an empty stomach, 30–60 min before food or coffee.', tag: 'empty stomach' },
+  { id: 'alpha_lipoic', label: 'alpha-lipoic acid', keywords: ['alpha-lipoic', 'alpha lipoic', 'lipoic'], tip: 'Absorbs best on an empty stomach — ~30 min before food.', tag: 'empty stomach' },
+  { id: 'ppi', label: 'acid reducer (PPI)', keywords: ['omeprazole', 'esomeprazole', 'pantoprazole', 'lansoprazole', 'prilosec', 'nexium'], tip: 'Take 30–60 min before your first meal of the day.', tag: 'empty stomach' },
 
   // ── fat-soluble / need a meal to absorb ──
   { id: 'vitamin_d', label: 'vitamin D', keywords: ['vitamin d', 'vit d', 'vitamin d3', 'cholecalciferol', 'd3'], tip: 'Fat-soluble — take with a meal that has some fat.', tag: 'with food' },
@@ -36,12 +38,31 @@ export const INGREDIENTS = [
   { id: 'berberine', label: 'berberine', keywords: ['berberine'], tip: 'Take with meals — it acts on blood sugar around eating.', tag: 'with food' },
   { id: 'milk_thistle', label: 'milk thistle', keywords: ['milk thistle', 'silymarin', 'cardo mariano', 'cardo mariã­'], tip: 'Take with food.', tag: 'with food' },
   { id: 'enzymes', label: 'digestive enzymes', keywords: ['digestive enzyme', 'digest gold', 'enzima', 'enzyme', 'bromelain', 'lipase'], tip: 'Take right before or at the start of a meal.', tag: 'with food' },
+  { id: 'multivitamin', label: 'multivitamin', keywords: ['multivitamin', 'multi vitamin', 'multi-vitamin', 'daily multi', 'one daily', 'centrum'], tip: 'Take with a meal — the fat-soluble vitamins in it need food.', tag: 'with food' },
+  { id: 'astaxanthin', label: 'astaxanthin', keywords: ['astaxanthin'], tip: 'Fat-soluble — take with a meal that has fat.', tag: 'with food' },
+  { id: 'lutein', label: 'lutein / zeaxanthin', keywords: ['lutein', 'zeaxanthin'], tip: 'Fat-soluble — take with food.', tag: 'with food' },
+  { id: 'carotene', label: 'beta-carotene', keywords: ['carotene'], tip: 'Fat-soluble — take with food.', tag: 'with food' },
+  { id: 'quercetin', label: 'quercetin', keywords: ['quercetin'], tip: 'Take with food; pairs with vitamin C.', tag: 'with food' },
+  { id: 'resveratrol', label: 'resveratrol', keywords: ['resveratrol', 'pterostilbene'], tip: 'Fat-soluble — take with a meal that has fat.', tag: 'with food' },
+  { id: 'glucosamine', label: 'glucosamine / MSM', keywords: ['glucosamine', 'chondroitin', 'msm'], tip: 'Take with food; be consistent for joints.', tag: 'with food' },
+  { id: 'betaine_hcl', label: 'betaine HCl', keywords: ['betaine hcl', 'betaine hydrochloride'], tip: 'Take in the middle of a protein-containing meal.', tag: 'with food' },
+  { id: 'saw_palmetto', label: 'saw palmetto', keywords: ['saw palmetto'], tip: 'Take with food to avoid stomach upset.', tag: 'with food' },
+  { id: 'dhea', label: 'DHEA', keywords: ['dhea'], tip: 'Usually taken in the morning with food.', tag: 'with food' },
+  { id: 'bacopa', label: 'bacopa', keywords: ['bacopa', 'brahmi'], tip: 'Take with food — it can upset an empty stomach.', tag: 'with food' },
+  { id: 'metformin', label: 'metformin', keywords: ['metformin', 'glucophage'], tip: 'Take with meals to ease stomach upset.', tag: 'with food' },
 
   // ── energizing → morning ──
   { id: 'b_complex', label: 'B vitamins', keywords: ['b complex', 'b-complex', 'vitamin b', 'b12', 'b-12', 'methylcobalamin', 'b6', 'b1', 'thiamine', 'riboflavin', 'niacin'], tip: 'Energizing — take in the morning; late in the day it can disrupt sleep.', tag: 'morning' },
   { id: 'vitamin_c', label: 'vitamin C', keywords: ['vitamin c', 'vit c', 'ascorbic', 'ascorbate'], tip: 'Water-soluble, anytime — pairs well with iron to boost absorption.', tag: 'morning' },
   { id: 'rhodiola', label: 'rhodiola', keywords: ['rhodiola'], tip: 'Stimulating adaptogen — take in the morning, not at night.', tag: 'morning' },
   { id: 'tyrosine', label: 'L-tyrosine', keywords: ['tyrosine'], tip: 'Energizing — take in the morning on an empty stomach.', tag: 'morning' },
+  { id: 'ginseng', label: 'ginseng', keywords: ['ginseng', 'panax', 'eleuthero'], tip: 'Energizing — take in the morning, not at night.', tag: 'morning' },
+  { id: 'maca', label: 'maca', keywords: ['maca'], tip: 'Energizing — most take it in the morning.', tag: 'morning' },
+  { id: 'cordyceps', label: 'cordyceps', keywords: ['cordyceps'], tip: 'Energizing mushroom — take earlier in the day.', tag: 'morning' },
+  { id: 'alcar', label: 'acetyl-L-carnitine', keywords: ['carnitine', 'alcar'], tip: 'Energizing — take in the morning, away from meals.', tag: 'morning' },
+  { id: 'choline', label: 'choline / alpha-GPC', keywords: ['alpha-gpc', 'alpha gpc', 'choline', 'citicoline', 'cdp-choline'], tip: 'Focus & energy — take earlier in the day.', tag: 'morning' },
+  { id: 'nad', label: 'NMN / NR', keywords: ['nmn', 'nicotinamide riboside', 'nad+'], tip: 'Take in the morning — it can be mildly energizing.', tag: 'morning' },
+  { id: 'sam_e', label: 'SAM-e', keywords: ['sam-e', 'ademetionine'], tip: 'Take in the morning on an empty stomach.', tag: 'morning' },
 
   // ── calming → night ──
   { id: 'magnesium', label: 'magnesium', keywords: ['magnesium', 'glycinate', 'threonate'], tip: 'Calming — most people take it in the evening.', tag: 'at night' },
@@ -50,6 +71,13 @@ export const INGREDIENTS = [
   { id: 'theanine', label: 'L-theanine', keywords: ['theanine'], tip: 'Calming — evening, or with coffee to smooth the jitters.', tag: 'at night' },
   { id: 'ashwagandha', label: 'ashwagandha', keywords: ['ashwagandha', 'ashwaganda', 'withania'], tip: 'Often taken in the evening to wind down (fine with food).', tag: 'at night' },
   { id: 'gaba', label: 'GABA', keywords: ['gaba'], tip: 'Calming — take in the evening.', tag: 'at night' },
+  { id: 'five_htp', label: '5-HTP', keywords: ['5-htp', '5 htp', 'hydroxytryptophan'], tip: 'Take in the evening — supports sleep and mood.', tag: 'at night' },
+  { id: 'tryptophan', label: 'L-tryptophan', keywords: ['tryptophan'], tip: 'Take in the evening.', tag: 'at night' },
+  { id: 'valerian', label: 'valerian', keywords: ['valerian'], tip: 'Sedating — take shortly before bed.', tag: 'at night' },
+  { id: 'calming_herbs', label: 'calming herbs', keywords: ['chamomile', 'passionflower', 'lemon balm', 'melissa'], tip: 'Calming — take in the evening.', tag: 'at night' },
+  { id: 'inositol', label: 'inositol', keywords: ['inositol'], tip: 'Often taken in the evening for calm and sleep.', tag: 'at night' },
+  { id: 'taurine', label: 'taurine', keywords: ['taurine'], tip: 'Calming — many take it in the evening.', tag: 'at night' },
+  { id: 'progesterone', label: 'progesterone', keywords: ['progesterone', 'prometrium'], tip: 'Usually taken at bedtime — it can make you drowsy.', tag: 'at night' },
 
   // ── minerals that compete (see conflicts) ──
   { id: 'calcium', label: 'calcium', keywords: ['calcium', 'cal-mag', 'calmag'], tip: 'Take with food, and keep it apart from iron, zinc, and thyroid meds.', tag: 'minerals' },
@@ -59,12 +87,32 @@ export const INGREDIENTS = [
 
   // ── special cases ──
   { id: 'fiber', label: 'fiber / psyllium', keywords: ['fiber', 'fibre', 'psyllium', 'metamucil', 'glucomannan'], tip: 'Keep fiber apart from your other supplements and meds — it can bind them.', tag: 'space from others' },
+  { id: 'charcoal', label: 'activated charcoal', keywords: ['activated charcoal', 'charcoal'], tip: 'Binds almost everything — keep it hours away from your supplements and meds.', tag: 'space from others' },
   { id: 'biotin', label: 'biotin', keywords: ['biotin'], tip: 'Anytime — but pause it a few days before thyroid/hormone lab tests; it can skew results.', tag: 'anytime' },
   { id: 'creatine', label: 'creatine', keywords: ['creatine'], tip: "Timing barely matters — just take it consistently every day.", tag: 'anytime' },
   { id: 'collagen', label: 'collagen', keywords: ['collagen', 'colageno', 'peptides'], tip: 'Anytime — vitamin C helps your body use it.', tag: 'anytime' },
   { id: 'probiotic', label: 'probiotic', keywords: ['probiotic', 'lactobacillus', 'bifido', 'kefir', 'saccharomyces'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
   { id: 'lions_mane', label: "lion's mane", keywords: ["lion's mane", 'lions mane', 'melena de le', 'hericium'], tip: 'Anytime that suits you — be consistent.', tag: 'anytime' },
   { id: 'caffeine', label: 'coffee / caffeine', keywords: ['coffee', 'caffeine', 'espresso'], tip: 'Keep it away from levothyroxine and iron.', tag: 'anytime' },
+  { id: 'nac', label: 'NAC', keywords: ['nac', 'n-acetyl', 'acetylcysteine'], tip: 'Anytime — some prefer it away from food.', tag: 'anytime' },
+  { id: 'glutathione', label: 'glutathione', keywords: ['glutathione'], tip: 'Anytime — often taken on an empty stomach.', tag: 'anytime' },
+  { id: 'glutamine', label: 'L-glutamine', keywords: ['glutamine'], tip: 'Anytime — often taken away from food for gut support.', tag: 'anytime' },
+  { id: 'lysine', label: 'L-lysine', keywords: ['lysine'], tip: 'Take on an empty stomach for best absorption.', tag: 'anytime' },
+  { id: 'beta_alanine', label: 'beta-alanine', keywords: ['beta-alanine', 'beta alanine'], tip: 'Anytime — split doses if the tingles bother you.', tag: 'anytime' },
+  { id: 'citrulline', label: 'citrulline', keywords: ['citrulline'], tip: 'Take ~30–60 min before a workout, or anytime.', tag: 'anytime' },
+  { id: 'bcaa', label: 'BCAAs / EAAs', keywords: ['bcaa', 'eaa', 'branched-chain'], tip: 'Around workouts, or anytime.', tag: 'anytime' },
+  { id: 'hyaluronic', label: 'hyaluronic acid', keywords: ['hyaluronic'], tip: 'Anytime — be consistent.', tag: 'anytime' },
+  { id: 'spermidine', label: 'spermidine', keywords: ['spermidine'], tip: 'Anytime — be consistent.', tag: 'anytime' },
+  { id: 'pqq', label: 'PQQ', keywords: ['pqq'], tip: 'Anytime — often paired with CoQ10.', tag: 'anytime' },
+  { id: 'reishi', label: 'reishi', keywords: ['reishi', 'ganoderma'], tip: 'Calming mushroom — many take it in the evening.', tag: 'anytime' },
+  { id: 'ginkgo', label: 'ginkgo', keywords: ['ginkgo'], tip: 'Anytime — be consistent for cognitive support.', tag: 'anytime' },
+  { id: 'saffron', label: 'saffron', keywords: ['saffron'], tip: 'Anytime — be consistent for mood support.', tag: 'anytime' },
+  { id: 'holy_basil', label: 'holy basil / tulsi', keywords: ['holy basil', 'tulsi'], tip: 'Adaptogen — anytime, be consistent.', tag: 'anytime' },
+  { id: 'dim', label: 'DIM', keywords: ['diindolylmethane', 'indole-3', 'dim'], tip: 'Take with food; supports estrogen balance.', tag: 'anytime' },
+  { id: 'statin', label: 'statin', keywords: ['atorvastatin', 'rosuvastatin', 'simvastatin', 'lipitor', 'crestor'], tip: 'Take at the same time each day — some are best in the evening.', tag: 'anytime' },
+  { id: 'glp1', label: 'GLP-1 (weekly)', keywords: ['semaglutide', 'tirzepatide', 'ozempic', 'wegovy', 'mounjaro', 'zepbound', 'rybelsus'], tip: 'Weekly injection — take it on the same day each week.', tag: 'anytime' },
+  { id: 'testosterone', label: 'testosterone', keywords: ['testosterone', 'trt', 'cypionate', 'enanthate'], tip: 'Follow your prescribed schedule and keep the timing consistent.', tag: 'anytime' },
+  { id: 'estradiol', label: 'estradiol', keywords: ['estradiol', 'estrogen'], tip: 'Take at a consistent time each day.', tag: 'anytime' },
 ];
 
 // Group order for the "how to time your stack" section.
@@ -122,10 +170,42 @@ export function detectIngredients(name) {
   return ids;
 }
 
+// Coarse timing character of each schedule slot — used to spot when an item is
+// scheduled against its ideal (e.g. a "night" supp sitting in a morning slot).
+const SLOT_TIMING = {
+  rx: { food: false, tod: 'am' }, pre_breakfast: { food: false, tod: 'am' }, breakfast: { food: true, tod: 'am' },
+  pre_lunch: { food: false, tod: 'mid' }, lunch: { food: true, tod: 'mid' },
+  pre_dinner: { food: false, tod: 'pm' }, dinner: { food: true, tod: 'pm' }, after_dinner: { food: false, tod: 'night' },
+  // intermittent-fasting slots (best-effort)
+  wake: { food: false, tod: 'am' }, pre_meal_1: { food: false, tod: 'mid' }, meal_1: { food: true, tod: 'mid' },
+  pre_meal_2: { food: false, tod: 'pm' }, meal_2: { food: true, tod: 'pm' },
+  pre_meal_3: { food: false, tod: 'pm' }, meal_3: { food: true, tod: 'pm' }, evening: { food: false, tod: 'night' },
+};
+
+function slotOkFor(tag, k) {
+  if (tag === 'with food') return k.food;
+  if (tag === 'empty stomach') return !k.food;
+  if (tag === 'at night') return k.tod === 'night' || k.tod === 'pm';
+  if (tag === 'morning') return k.tod === 'am';
+  return true; // minerals / space / anytime — no slot preference
+}
+
+// A short "move" suggestion if the item's scheduled slot(s) clash with its ideal
+// timing; null otherwise. Anytime / unslotted items are never flagged.
+function slotMove(supp, tag) {
+  const kinds = (supp.slots || []).map((id) => SLOT_TIMING[id]).filter(Boolean);
+  if (!kinds.length || kinds.some((k) => slotOkFor(tag, k))) return null;
+  if (tag === 'with food') return 'you take it before eating — move it to a meal';
+  if (tag === 'empty stomach') return 'you take it with a meal — move it away from food';
+  if (tag === 'at night') return 'you take it in the morning — try the evening';
+  if (tag === 'morning') return 'you take it in the evening — try the morning';
+  return null;
+}
+
 // Per-supplement timing guidance across the WHOLE stack, grouped by tag (ordered
 // by TAG_ORDER). Every recognized item contributes its tip — so a 30-item regimen
-// gets rich, organized guidance ("take these 6 with food, these 3 at night"), not
-// just the rare conflict. De-duped by ingredient.
+// gets rich, organized guidance ("take these 6 with food, these 3 at night") — and
+// each item is checked against its scheduled slot for a personal "move" nudge.
 export function timingTips(supps) {
   const byTag = {};
   for (const s of (supps || []).filter(isActiveSupp)) {
@@ -133,9 +213,15 @@ export function timingTips(supps) {
     // gets a single, sensible line, not one per component).
     const ing = INGREDIENTS.find((i) => i.tip && hasKeyword(s.name, i.keywords));
     if (!ing) continue;
-    (byTag[ing.tag] ||= []).push({ id: s.id, label: ing.label, suppName: s.name, tip: ing.tip });
+    (byTag[ing.tag] ||= []).push({ id: s.id, label: ing.label, suppName: s.name, tip: ing.tip, tag: ing.tag, move: slotMove(s, ing.tag) });
   }
   return TAG_ORDER.filter((t) => byTag[t]).map((tag) => ({ tag, items: byTag[tag] }));
+}
+
+// The subset of tips whose current slot clashes with their ideal timing — the
+// actionable "worth moving" list, surfaced at the top of the view.
+export function movers(supps) {
+  return timingTips(supps).flatMap((g) => g.items).filter((i) => i.move);
 }
 
 // Scan an active regimen for timing-sensitive ingredient pairs. Returns one
