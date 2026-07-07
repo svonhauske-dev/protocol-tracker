@@ -69,7 +69,7 @@ export async function recomputeForUser(admin: any, userId: string, tz: string): 
     // Selecting created_at + deleted_at so isSupplementActiveOn's date
     // bounds can be evaluated (defense in depth).
     admin.from("supplements")
-      .select("id, name, dose, slots, days, pinned_time, treatment_mode, starts_at, ends_at, cycle_on_value, cycle_on_unit, cycle_off_value, cycle_off_unit, created_at, deleted_at, units_per_dose, stock_count, stock_filled_on, low_supply_days, low_supply_notified_at")
+      .select("id, name, dose, slots, days, pinned_time, repeat_after_hours, treatment_mode, starts_at, ends_at, cycle_on_value, cycle_on_unit, cycle_off_value, cycle_off_unit, created_at, deleted_at, units_per_dose, stock_count, stock_filled_on, low_supply_days, low_supply_notified_at")
       .eq("user_id", userId)
       .eq("status", "active")
       .is("deleted_at", null),
@@ -527,6 +527,37 @@ export async function recomputeForUser(admin: any, userId: string, tz: string): 
         slot_id:             slotId,
         tag:                 `${dateStr}_${slotId}`,
         fired:               false,
+      });
+    }
+
+    // ── Interval second dose (repeat_after_hours) ───────────────────────────────
+    // Fires N hours after the FIRST dose (anchor + the supp's earliest slot
+    // offset) — tracks the actual anchor, unlike a fixed pinned time. Anchor
+    // modes only; needs a slot. Independent row keyed repeat_${id} (like pinned).
+    for (const supp of supps) {
+      const n = Number(supp.repeat_after_hours);
+      if (!n || !Array.isArray(supp.slots) || supp.slots.length === 0) continue;
+      if (!Array.isArray(supp.days) || !supp.days.includes(dayOfWeek)) continue;
+      if (!isSupplementActiveOn(supp, dateStr)) continue;
+      let firstOff: number | null = null;
+      for (const sid of supp.slots) {
+        const o = sid === "rx" ? 0 : offsets[sid];
+        if (o === null || o === undefined) continue;
+        if (firstOff === null || (o as number) < firstOff) firstOff = o as number;
+      }
+      if (firstOff === null) continue;
+      const fireAt = addMins(anchorDate, firstOff + Math.round(n * 60));
+      if (fireAt <= now) continue;
+      if (fireAt.toLocaleDateString("sv-SE", { timeZone: tz }) !== dateStr) continue; // stays this local day
+      rows.push({
+        user_id:            userId,
+        fire_at:            fireAt.toISOString(),
+        scheduled_for_date: fireAt.toLocaleDateString("sv-SE", { timeZone: tz }),
+        title:              `Time for ${supp.name}`,
+        body:               `second dose${supp.dose ? " · " + supp.dose : ""}`,
+        slot_id:            `repeat_${supp.id}`,
+        tag:                `${dateStr}_repeat_${supp.id}`,
+        fired:              false,
       });
     }
   }

@@ -484,6 +484,11 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   // "Second dose": a supp in a timed slot AND with a pinned time — appears in its
   // slot AND gets a separate pinned card (checked in the 'anytime' namespace).
   const slottedPinnedSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return Array.isArray(sl) && sl.length > 0 && s.pinned_time && inDay(s); });
+  // Interval dosing: a slotted supp with `repeat_after_hours` gets a SECOND dose
+  // N hours after its first dose — a second card at first-dose-time + N (tracks
+  // the anchor, unlike a fixed pinned time). Same 'anytime' check namespace as a
+  // slotted-pinned second dose (disjoint sets: pinned XOR interval).
+  const intervalSupps = homeSupps.filter((s) => { const sl = scheduleOn(s, viewDate).slots; return Array.isArray(sl) && sl.length > 0 && s.repeat_after_hours && !s.pinned_time && inDay(s); });
 
   // ── Supply / refill ──────────────────────────────────────────────────────────
   // "Remaining" derives from the check-off history: fetch the stable historical
@@ -590,10 +595,11 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     }
   }
 
-  let coreTotal = anytimeSupps.length + slottedPinnedSupps.length;
+  let coreTotal = anytimeSupps.length + slottedPinnedSupps.length + intervalSupps.length;
   let coreDone = 0;
   anytimeSupps.forEach((s) => { if (isChecked('anytime', s.id)) coreDone++; });
   slottedPinnedSupps.forEach((s) => { if (isChecked('anytime', s.id)) coreDone++; });
+  intervalSupps.forEach((s) => { if (isChecked('anytime', s.id)) coreDone++; });
   coreSlotIds.forEach((sid) => {
     const sl = getSuppsForSlot(sid);
     coreTotal += sl.length;
@@ -632,7 +638,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   const blankForm = (protocol_id = null) => ({
     name: '', dose: '', notes: '', slots: [], days: [], category: 'Oral', paused: false, status: 'active',
     protocol_id, treatment_mode: 'indefinite', starts_at: null, ends_at: null,
-    cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null, pinned_time: null,
+    cycle_on_value: null, cycle_on_unit: null, cycle_off_value: null, cycle_off_unit: null, pinned_time: null, repeat_after_hours: null,
     // dose = amount (units_per_dose) + form (stock_unit); supply = stock_count.
     units_per_dose: '', stock_count: '', stock_unit: '',
   });
@@ -678,6 +684,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
       cycle_on_value: supp.cycle_on_value || null, cycle_on_unit: supp.cycle_on_unit || null,
       cycle_off_value: supp.cycle_off_value || null, cycle_off_unit: supp.cycle_off_unit || null,
       pinned_time: supp.pinned_time || null,
+      repeat_after_hours: supp.repeat_after_hours || null,
       // dose amount + form: from the structured fields if present, else parse the
       // legacy free-text dose. supply bottle count is separate + optional.
       ...(() => {
@@ -729,7 +736,12 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
       cycle_off_value: txMode === 'cycled' ? form.cycle_off_value || null : null,
       cycle_off_unit: txMode === 'cycled' ? form.cycle_off_unit || (form.cycle_off_value ? 'days' : null) : null,
     };
-    const pinnedField = { pinned_time: form.pinned_time || null };
+    // A second dose is EITHER a fixed clock time (pinned) OR an interval after the
+    // first dose (repeat) — mutually exclusive. Interval needs a slot (its "first
+    // dose"); no slot → no interval.
+    const hasSlots = Array.isArray(form.slots) && form.slots.length > 0;
+    const repeatH = hasSlots ? (Number(form.repeat_after_hours) || null) : null;
+    const pinnedField = { pinned_time: repeatH ? null : (form.pinned_time || null), repeat_after_hours: repeatH };
 
     // Dose = amount + form (e.g. "1 pill"); compose the display string so every
     // screen keeps reading supp.dose unchanged. The amount is also units-per-dose.
@@ -1085,7 +1097,16 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
 
   // ── Build cards: interleave pinned-time cards into the cascade by clock time ──
   const slotDefsWithSupps = slotDefs.filter((sd) => getSuppsForSlot(sd.id).length > 0);
-  const pinnedDescs = [...pinnedSupps, ...slottedPinnedSupps].map((s) => ({ s, t: parseHHMM(s.pinned_time) })).sort((a, b) => a.t - b.t);
+  // Earliest scheduled slot time for a supp today (the "first dose" the interval counts from).
+  const firstSlotTime = (s) => {
+    let best = null;
+    for (const sid of (scheduleOn(s, viewDate).slots || [])) { const tt = getSlotTime(sid, ctx); if (tt && (!best || tt < best)) best = tt; }
+    return best;
+  };
+  const pinnedDescs = [
+    ...[...pinnedSupps, ...slottedPinnedSupps].map((s) => ({ s, t: parseHHMM(s.pinned_time) })),
+    ...intervalSupps.map((s) => { const ft = firstSlotTime(s); return ft ? { s, t: new Date(ft.getTime() + s.repeat_after_hours * 3_600_000) } : null; }).filter(Boolean),
+  ].filter((d) => d.t).sort((a, b) => a.t - b.t);
 
   const renderSlot = (sd) => {
     const sl = getSuppsForSlot(sd.id);
@@ -1112,8 +1133,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
       />
     );
   };
-  const renderPinned = (s) => {
-    const t = parseHHMM(s.pinned_time);
+  const renderPinned = (s, t) => {
     const on = isChecked('anytime', s.id);
     const diff = (Date.now() - t.getTime()) / 60000;
     const status = on ? 'done' : !isToday ? 'missed' : diff > 15 ? 'missed' : diff > -5 ? 'now' : 'future';
@@ -1142,10 +1162,10 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   let pi = 0;
   for (const sd of slotDefsWithSupps) {
     const st = getSlotTime(sd.id, ctx);
-    while (pi < pinnedDescs.length && st && pinnedDescs[pi].t <= st) { cards.push(renderPinned(pinnedDescs[pi].s)); pi++; }
+    while (pi < pinnedDescs.length && st && pinnedDescs[pi].t <= st) { cards.push(renderPinned(pinnedDescs[pi].s, pinnedDescs[pi].t)); pi++; }
     cards.push(renderSlot(sd));
   }
-  while (pi < pinnedDescs.length) { cards.push(renderPinned(pinnedDescs[pi].s)); pi++; }
+  while (pi < pinnedDescs.length) { cards.push(renderPinned(pinnedDescs[pi].s, pinnedDescs[pi].t)); pi++; }
   if (untimedSupps.length > 0) {
     cards.push(
       <SlotCard

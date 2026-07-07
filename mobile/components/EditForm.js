@@ -15,6 +15,7 @@ import Badge from './Badge';
 import HelperText from './HelperText';
 import Text from './Text';
 import Callout from './Callout';
+import Stepper from './Stepper';
 import { useProGate } from '../context/ProContext';
 import { theme, spacing, typography, touch, fonts } from '../theme';
 
@@ -75,6 +76,7 @@ export default function EditForm({
   const [nameTouched, setNameTouched] = useState(false);
   const [touched, setTouched] = useState({});
   const [pinnedOpen, setPinnedOpen] = useState(!!form.pinned_time);
+  const [repeatOpen, setRepeatOpen] = useState(!!form.repeat_after_hours);
   const [activePicker, setActivePicker] = useState(null); // { field, mode } — inline date/time picker
   const { width: screenW } = useWindowDimensions();
 
@@ -325,17 +327,31 @@ export default function EditForm({
           ))}
           {/* Anytime + Specific time flow in the SAME wrap row as the slots, so
               they sit next to Evening instead of dropping to their own block. */}
-          <Button variant="selector" active={form.slots.length === 0} onPress={() => setForm((f) => ({ ...f, slots: [] }))}>Anytime</Button>
+          <Button variant="selector" active={form.slots.length === 0} onPress={() => { setPinnedOpen(false); setRepeatOpen(false); setForm((f) => ({ ...f, slots: [], pinned_time: null, repeat_after_hours: null })); }}>Anytime</Button>
           <Button
             variant="selector"
             active={pinnedOpen}
             onPress={() => {
               if (pinnedOpen) { setPinnedOpen(false); setForm((f) => ({ ...f, pinned_time: null })); }
-              else setPinnedOpen(true);
+              else { setPinnedOpen(true); setRepeatOpen(false); setForm((f) => ({ ...f, repeat_after_hours: null })); }
             }}
           >
             Specific time
           </Button>
+          {/* Interval second dose — only for a slotted supp (its first dose is the
+              slot; the second fires N hours later, tracking the anchor). */}
+          {form.slots.length > 0 ? (
+            <Button
+              variant="selector"
+              active={repeatOpen}
+              onPress={() => {
+                if (repeatOpen) { setRepeatOpen(false); setForm((f) => ({ ...f, repeat_after_hours: null })); }
+                else { setRepeatOpen(true); setPinnedOpen(false); setForm((f) => ({ ...f, pinned_time: null, repeat_after_hours: f.repeat_after_hours || 6 })); }
+              }}
+            >
+              Second dose
+            </Button>
+          ) : null}
         </View>
 
         {pinnedOpen ? (
@@ -345,6 +361,19 @@ export default function EditForm({
               {form.slots.length === 0
                 ? 'reminder at this exact time each day, independent of your schedule'
                 : 'additional reminder at this exact time, on top of your cascade slot'}
+            </HelperText>
+          </View>
+        ) : null}
+
+        {repeatOpen && form.slots.length > 0 ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Text tone="secondary">again</Text>
+              <Stepper value={form.repeat_after_hours || 6} onChange={(h) => setForm((f) => ({ ...f, repeat_after_hours: h }))} min={1} max={12} unit="h" />
+              <Text tone="secondary">after the first dose</Text>
+            </View>
+            <HelperText style={{ marginTop: spacing.xxxs }}>
+              a second reminder this many hours after you take the first dose — it moves with your actual timing, not a fixed clock
             </HelperText>
           </View>
         ) : null}
