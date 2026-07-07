@@ -270,30 +270,6 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>how you feel · last {WINDOW} days</SectionHeader>
 
-            {/* Objective layer from Apple Health — sleep charted over the window,
-                recovery as latest + average. The wearable numbers next to how you
-                rated the days. Renders only when connected AND data came back. */}
-            {healthView && healthView.hasAny ? (
-              <View style={{ marginBottom: spacing.lg, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}>
-                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>from apple health</Text>
-                {healthView.hasSleep ? (
-                  <View style={{ marginBottom: (healthView.hrvLatest != null || healthView.hrLatest != null) ? spacing.md : 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                      <Text size="caption" tone="secondary">sleep</Text>
-                      <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{healthView.sleepAvg == null ? '—' : `${healthView.sleepAvg}h avg`}</Text>
-                    </View>
-                    <BarSeries values={healthView.sleepSeries} height={22} />
-                  </View>
-                ) : null}
-                {(healthView.hrvLatest != null || healthView.hrLatest != null) ? (
-                  <View style={{ flexDirection: 'row' }}>
-                    {healthView.hrvLatest != null ? <HealthStat label={healthView.hrvAvg != null ? `hrv · ${healthView.hrvAvg} avg` : 'hrv'} value={`${healthView.hrvLatest}`} unit="ms" /> : null}
-                    {healthView.hrLatest != null ? <HealthStat label={healthView.hrAvg != null ? `resting · ${healthView.hrAvg} avg` : 'resting hr'} value={`${healthView.hrLatest}`} unit="bpm" /> : null}
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-
             {/* Feeling always shows (the primary track) — empty when unlogged, so
                 the shape is visible — with a one-line prompt until check-ins accrue. */}
             {!model.hasOutcomes ? (
@@ -321,6 +297,30 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
                 <BarSeries values={o.series} height={22} />
               </View>
             ))}
+
+            {/* Objective layer from Apple Health — sleep charted, recovery as
+                latest·avg. Borderless like the rest of the section (no card);
+                renders only when connected AND data came back. */}
+            {healthView && healthView.hasAny ? (
+              <View style={{ marginTop: spacing.lg }}>
+                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>from apple health</Text>
+                {healthView.hasSleep ? (
+                  <View style={{ marginBottom: (healthView.hrvLatest != null || healthView.hrLatest != null) ? spacing.md : 0 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                      <Text size="caption" tone="secondary">sleep</Text>
+                      <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{healthView.sleepAvg == null ? '—' : `${healthView.sleepAvg}h avg`}</Text>
+                    </View>
+                    <BarSeries values={healthView.sleepSeries} height={22} />
+                  </View>
+                ) : null}
+                {(healthView.hrvLatest != null || healthView.hrLatest != null) ? (
+                  <View style={{ flexDirection: 'row' }}>
+                    {healthView.hrvLatest != null ? <HealthStat label={healthView.hrvAvg != null ? `hrv · ${healthView.hrvAvg} avg` : 'hrv'} value={`${healthView.hrvLatest}`} unit="ms" /> : null}
+                    {healthView.hrLatest != null ? <HealthStat label={healthView.hrAvg != null ? `resting · ${healthView.hrAvg} avg` : 'resting hr'} value={`${healthView.hrLatest}`} unit="bpm" /> : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
             {/* Persistent entry — the home has no check-in and the daily moment is
                 once-a-day, so this is where you can always log or edit today. */}
