@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, FileUp } from 'lucide-react-native';
+import { dateKey, startOfDay, isActiveSupp } from 'shared/lib/time';
+import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
 import { Heading } from '../components';
 import IconButton from '../components/IconButton';
 import TabBar from '../components/TabBar';
+import InlineLoader from '../components/InlineLoader';
+import { useToast } from '../components/Toast';
+import { computeReportData, shareHealthReport } from '../lib/protocolPdf';
 import Trends from './Trends';
 import Interactions from './Interactions';
 import { theme, spacing, icon } from '../theme';
+
+const REPORT_WINDOW = 90; // days
 
 // Insights — the regimen's read-only review surface. Folds the two low-frequency
 // "look back" screens under one entry with a TabBar (same title + tabs pattern as
@@ -19,17 +26,43 @@ const TABS = [
   { value: 'interactions', label: 'interactions' },
 ];
 
-export default function Insights({ supps = [], activeSlotIds, slotDefs = [], userId, token, onBack, initialTab = 'adherence' }) {
+export default function Insights({ supps = [], activeSlotIds, slotDefs = [], userId, token, profile, scheduleMode, onBack, initialTab = 'adherence' }) {
   const insets = useSafeAreaInsets();
+  const { show: showToast } = useToast();
   const [tab, setTab] = useState(initialTab);
+  const [exporting, setExporting] = useState(false);
+
+  // Export the doctor report — the whole regimen + adherence + how-you-feel over
+  // the window, as one PDF (same engine as the protocol share). Fetches the
+  // window's logs + check-ins, computes the summary, opens the share sheet.
+  const exportReport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const today = startOfDay(new Date());
+      const start = new Date(today); start.setDate(start.getDate() - (REPORT_WINDOW - 1));
+      const [logs, checkins] = await Promise.all([
+        dbGetDailyLogsRange(userId, dateKey(start), dateKey(today), token).catch(() => []),
+        dbGetCheckinsRange(userId, dateKey(start), dateKey(today), token).catch(() => []),
+      ]);
+      const report = computeReportData({ supps, logs: logs || [], checkins: checkins || [], slotDefs, activeSlotIds, windowDays: REPORT_WINDOW });
+      await shareHealthReport({ profile, activeSupps: supps.filter(isActiveSupp), scheduleMode, report });
+    } catch (e) {
+      showToast("couldn't build the report — try again", { tone: 'error' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.canvas }}>
-      {/* Header — drill-in nav-title with hairline, identical to Protocols/Settings. */}
+      {/* Header — drill-in nav-title with hairline; export action on the right. */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Math.max(insets.top, 20), paddingHorizontal: spacing.md, paddingBottom: spacing.sm, borderBottomWidth: theme.borderWidth.default, borderBottomColor: theme.border.subtle }}>
         <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
         <Heading level={1} visual="body" font="body">Insights</Heading>
-        <View style={{ width: 44 }} />
+        <IconButton accessibilityLabel="Export report for your doctor" onPress={exportReport} disabled={exporting}>
+          {exporting ? <InlineLoader /> : <FileUp size={icon.sm} color={theme.text.secondary} />}
+        </IconButton>
       </View>
 
       {/* Tabs — inset + lg gap under the header, matching ProtocolLibrary's active/saved. */}

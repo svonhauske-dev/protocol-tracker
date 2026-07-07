@@ -7,6 +7,7 @@
 // JetBrains Mono + Space Grotesk, hairline rules, zero radius.
 
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
+import { calculateSlotAdherence, calculateSupplementAdherence } from 'shared/lib/adherence';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -94,8 +95,61 @@ function groupBySlot(supps, scheduleMode) {
   return groups;
 }
 
+// ── Report data — adherence + outcomes over a window (for the doctor report) ──
+// Uses the same shared adherence helpers as the app, so the numbers match Insights.
+export function computeReportData({ supps = [], logs = [], checkins = [], slotDefs = [], activeSlotIds = null, windowDays = 90 }) {
+  let taken = 0, expected = 0;
+  const suppRows = [];
+  for (const s of supps) {
+    const a = calculateSupplementAdherence(s, logs, activeSlotIds, windowDays);
+    if (!a) continue;
+    taken += a.taken; expected += a.expected;
+    suppRows.push({ name: s.name, pct: a.pct, taken: a.taken, expected: a.expected });
+  }
+  suppRows.sort((x, y) => x.pct - y.pct); // worst first — the actionable end
+  const overall = expected ? Math.round((taken / expected) * 100) : null;
+
+  const slots = [];
+  for (const sd of slotDefs) {
+    const a = calculateSlotAdherence(sd.id, supps, logs, windowDays);
+    if (a) slots.push({ label: sd.label, pct: a.pct });
+  }
+
+  const avg = (key) => { const v = checkins.map((c) => c[key]).filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const outcomes = checkins.length ? { energy: avg('energy'), mood: avg('mood'), sleep: avg('sleep'), count: checkins.length } : null;
+
+  return { windowDays, overall, taken, expected, slots, suppRows, outcomes };
+}
+
+// Adherence + how-you-feel HTML sections — only rendered when the report data is
+// present (the doctor report). Absent → the document is the plain protocol PDF.
+function reportSectionsHtml(report) {
+  if (!report) return '';
+  const { overall, taken, expected, slots, outcomes, windowDays } = report;
+  const bar = (pct) => `<span class="bar"><span class="bar-fill" style="width:${Math.max(2, Math.min(100, pct))}%"></span></span>`;
+  const adherence = overall == null ? '' : `
+    <section class="rpt">
+      <div class="rpt-label">Adherence · last ${windowDays} days</div>
+      <div class="big">${overall}%<span class="big-sub">of doses taken on schedule<br/>${taken} of ${expected} doses</span></div>
+      ${slots.length ? `<table class="bars">${slots.map((s) => `<tr><td class="bl">${esc(s.label)}</td><td class="bb">${bar(s.pct)}</td><td class="bp">${s.pct}%</td></tr>`).join('')}</table>` : ''}
+    </section>`;
+  const feel = outcomes ? `
+    <section class="rpt">
+      <div class="rpt-label">How you feel · last ${windowDays} days</div>
+      <div class="feel">
+        <div class="fcell"><div class="fv">${outcomes.energy != null ? outcomes.energy.toFixed(1) : '—'}</div><div class="fl">energy</div></div>
+        <div class="fcell"><div class="fv">${outcomes.mood != null ? outcomes.mood.toFixed(1) : '—'}</div><div class="fl">mood</div></div>
+        <div class="fcell"><div class="fv">${outcomes.sleep != null ? outcomes.sleep.toFixed(1) : '—'}</div><div class="fl">sleep</div></div>
+      </div>
+      <div class="feel-sub">average of ${outcomes.count} daily check-in${outcomes.count === 1 ? '' : 's'}, on a 1–5 scale</div>
+    </section>` : '';
+  return adherence + feel;
+}
+
 // ── HTML ─────────────────────────────────────────────────────────────────────
-function buildHtml(protocol, supps, profile, scheduleMode) {
+// `report` (optional) turns the protocol PDF into the full doctor report: same
+// engine, with adherence + how-you-feel sections prepended and a report masthead.
+function buildHtml(protocol, supps, profile, scheduleMode, report = null) {
   const groups = groupBySlot(supps, scheduleMode);
   const count = groups.reduce((n, g) => n + g.supps.length, 0);
 
@@ -127,9 +181,17 @@ function buildHtml(protocol, supps, profile, scheduleMode) {
     </section>`;
   }).join('');
 
-  const body = count === 0
-    ? `<div class="empty">$ no active items in this protocol</div>`
-    : sections;
+  const protocolBlock = count === 0
+    ? `<div class="empty">$ no active items</div>`
+    : `${report ? '<div class="rpt-label" style="margin-top:28px">Current protocol</div>' : ''}${sections}`;
+
+  // Masthead differs by mode: a protocol PDF is titled by the protocol; the
+  // report is titled for the person, over a window.
+  const eyebrow = report ? 'ORIGIN · HEALTH REPORT' : 'ORIGIN';
+  const title = report ? esc(displayName(profile)) : esc(protocol?.name || 'Untitled protocol');
+  const metaLine = report
+    ? `Prepared for your appointment &nbsp;·&nbsp; last ${report.windowDays} days<br/><span class="count">${count} ${count === 1 ? 'item' : 'items'} in your regimen</span>`
+    : `${status}<br/><span class="count">${count} ${count === 1 ? 'item' : 'items'} · ${groups.length} ${groups.length === 1 ? 'group' : 'groups'}</span>`;
 
   return `<!doctype html><html><head><meta charset="utf-8"/>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
@@ -160,15 +222,33 @@ function buildHtml(protocol, supps, profile, scheduleMode) {
 
     .empty { color: #888; padding: 48px 0; font-size: 13px; }
 
+    /* ── Report sections (doctor report) ── */
+    .rpt { margin-top: 28px; break-inside: avoid; }
+    .rpt-label { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; border-bottom: 1px solid #0d0d0d; padding-bottom: 6px; }
+    .big { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -1px; margin: 14px 0 6px; line-height: 1; }
+    .big-sub { font-family: 'JetBrains Mono', monospace; font-weight: 400; font-size: 11px; letter-spacing: 0; color: #666; margin-left: 12px; }
+    .bars { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .bars td { padding: 5px 0; vertical-align: middle; }
+    .bl { font-size: 11.5px; width: 42%; padding-right: 12px; }
+    .bb { width: 42%; padding-right: 12px; }
+    .bar { display: block; height: 7px; background: #ececec; }
+    .bar-fill { display: block; height: 7px; background: #0d0d0d; }
+    .bp { font-size: 11.5px; font-weight: 500; text-align: right; white-space: nowrap; }
+    .feel { display: flex; gap: 44px; margin-top: 14px; }
+    .fv { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 1; }
+    .fl { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-top: 5px; }
+    .feel-sub { font-size: 11px; color: #888; margin-top: 12px; }
+
     /* ── Footer ── */
     .foot { margin-top: 40px; padding-top: 12px; border-top: 1px solid #0d0d0d; display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 0.3px; color: #999; }
   </style></head>
   <body>
-    <div class="eyebrow">ORIGIN</div>
-    <h1>${esc(protocol?.name || 'Untitled protocol')}</h1>
-    <div class="meta">${status}<br/><span class="count">${count} ${count === 1 ? 'item' : 'items'} · ${groups.length} ${groups.length === 1 ? 'group' : 'groups'}</span></div>
+    <div class="eyebrow">${eyebrow}</div>
+    <h1>${title}</h1>
+    <div class="meta">${metaLine}</div>
     <div class="rule"></div>
-    ${body}
+    ${reportSectionsHtml(report)}
+    ${protocolBlock}
     <div class="foot">
       <span>Generated by Origin · ${esc(fmtLong(new Date()))}</span>
       <span>Personal wellness tracking · Not medical advice</span>
@@ -189,26 +269,62 @@ export function protocolHtml(protocol, allSupps, profile, scheduleMode) {
 // Filesystem-safe filename from the protocol name → "Thyroid Protocol.pdf".
 const safeFileName = (name) => `${String(name || 'protocol').replace(/[\/\\:*?"<>|]/g, '-').trim().slice(0, 80) || 'protocol'}.pdf`;
 
-// Render the PDF, give it a human filename ("{Protocol}.pdf" — not a temp UUID),
-// and open the iOS share sheet to send it (Messages / Mail / AirDrop / Files).
-export async function shareProtocolPdf(protocol, allSupps, profile, scheduleMode) {
-  const Print = await import('expo-print');
-  const Sharing = await import('expo-sharing');
-  const { File, Paths } = await import('expo-file-system');
-  const { uri } = await Print.printToFileAsync({ html: protocolHtml(protocol, allSupps, profile, scheduleMode) });
+// Lazy-load the native PDF/share modules. Metro's dynamic-import interop can hide
+// a CJS module's exports under `.default`, so unwrap to whichever shape actually
+// carries the API (fixes "printToFileAsync is not a function").
+async function loadNative() {
+  const p = await import('expo-print');
+  const s = await import('expo-sharing');
+  const f = await import('expo-file-system');
+  return {
+    Print: p.printToFileAsync ? p : (p.default || p),
+    Sharing: s.isAvailableAsync ? s : (s.default || s),
+    FS: f.File ? f : (f.default || f),
+  };
+}
 
-  // expo-print writes a random temp name; copy to a nicely-named file so the
-  // shared attachment reads "Thyroid Protocol.pdf".
+// Render `html` to a PDF, copy it to a human filename, and open the iOS share
+// sheet. Shared by both the protocol PDF and the doctor report.
+async function renderAndShare(html, fileBase, dialogTitle) {
+  const { Print, Sharing, FS } = await loadNative();
+  const { File, Paths } = FS;
+  const { uri } = await Print.printToFileAsync({ html });
+
   let shareUri = uri;
   try {
-    const named = new File(Paths.cache, safeFileName(protocol?.name));
+    const named = new File(Paths.cache, safeFileName(fileBase));
     try { if (named.exists) named.delete(); } catch {}
     new File(uri).copy(named);
     shareUri = named.uri;
-  } catch { /* fall back to the temp uri if the copy fails */ }
+  } catch { /* fall back to the temp uri */ }
 
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(shareUri, { mimeType: 'application/pdf', dialogTitle: `Share ${protocol?.name || 'protocol'}`, UTI: 'com.adobe.pdf' });
+    await Sharing.shareAsync(shareUri, { mimeType: 'application/pdf', dialogTitle, UTI: 'com.adobe.pdf' });
   }
   return shareUri;
+}
+
+// Render the PDF, give it a human filename ("{Protocol}.pdf" — not a temp UUID),
+// and open the iOS share sheet to send it (Messages / Mail / AirDrop / Files).
+export async function shareProtocolPdf(protocol, allSupps, profile, scheduleMode) {
+  return renderAndShare(
+    protocolHtml(protocol, allSupps, profile, scheduleMode),
+    protocol?.name,
+    `Share ${protocol?.name || 'protocol'}`,
+  );
+}
+
+// ── The doctor report — same engine, all sections ────────────────────────────
+// The full report: whole active regimen + adherence + how-you-feel over a window.
+// `report` comes from computeReportData(). No single protocol — it's about the person.
+export function healthReportHtml(profile, activeSupps, scheduleMode, report) {
+  return buildHtml(null, activeSupps || [], profile, scheduleMode, report);
+}
+
+export async function shareHealthReport({ profile, activeSupps, scheduleMode, report }) {
+  return renderAndShare(
+    healthReportHtml(profile, activeSupps, scheduleMode, report),
+    `${displayName(profile)} — Origin report`,
+    'Share your report',
+  );
 }

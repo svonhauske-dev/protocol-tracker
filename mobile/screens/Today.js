@@ -1363,6 +1363,8 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
           slotDefs={slotDefs}
           userId={user.id}
           token={token()}
+          profile={profile}
+          scheduleMode={scheduleMode}
           initialTab={hasTimingConflict ? 'interactions' : 'adherence'}
           onBack={() => setShowInsights(false)}
         />
