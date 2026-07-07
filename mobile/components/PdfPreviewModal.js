@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, Animated, Easing, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { X } from 'lucide-react-native';
+import { X, Share } from 'lucide-react-native';
 import Text from './Text';
-import Button from './Button';
 import { theme, spacing, typography, icon, touch, fonts } from '../theme';
 
 // Full-screen document preview — renders the protocol's HTML (identical to the
@@ -52,9 +51,14 @@ export default function PdfPreviewModal({ open, html, title, onShare, onClose, s
             <X size={icon.sm} color={theme.text.secondary} />
           </Pressable>
           <Text style={{ fontSize: typography.body, color: theme.text.primary, fontFamily: fonts.grotesk.semibold }}>preview</Text>
-          <View style={{ minWidth: 96 }}>
-            <Button variant="primary" onPress={onShare} disabled={sharing}>{sharing ? '…' : 'share'}</Button>
-          </View>
+          <Pressable
+            onPress={onShare}
+            disabled={sharing}
+            accessibilityLabel="Share"
+            style={{ width: touch.min, height: touch.min, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, alignItems: 'center', justifyContent: 'center', opacity: sharing ? 0.5 : 1 }}
+          >
+            {sharing ? <ActivityIndicator color={theme.text.secondary} /> : <Share size={icon.sm} color={theme.text.secondary} strokeWidth={1.5} />}
+          </Pressable>
         </View>
 
         {/* Document — framed like a page on a desk: the white paper floats on the
