@@ -1,18 +1,17 @@
-// Apple Health (HealthKit) integration — GUARDED SCAFFOLD.
+// Apple Health (HealthKit) integration — GUARDED, written for the v14 API of
+// @kingstinct/react-native-healthkit (Nitro).
 //
-// The native HealthKit module is NOT bundled yet (it rides a dedicated build —
-// see the activation notes at the bottom of this file). Everything here is
-// lazy-loaded + try/caught so the current dev client and any build that
-// predates the native dep stay a NO-OP instead of crashing. When the module is
-// present, these light up with zero call-site changes.
+// The native module + HealthKit capability + Info.plist strings are committed,
+// but they only take effect once a native build links HealthKit. Until then
+// (current dev client, Simulator, any pre-Health build) every call here is
+// lazy-loaded + try/caught and returns a null/false NO-OP instead of crashing.
+// When the Health build ships, these light up with zero call-site changes.
 //
-// Scope (timing/outcomes credibility, privacy-first):
-//   READ   sleep (hours), steps, active energy — context for the outcomes loop
-//   WRITE  reserved (e.g. mindful/State-of-Mind from the daily check-in) — off
-//          until we've verified read on a real device.
-//
-// We NEVER read Health data without an explicit user opt-in (the Settings
-// toggle), and we never send Health data off-device.
+// Scope (privacy-first): READ sleep + the two recovery signals every wearable
+// (Apple Watch, and Oura/Whoop via Health sync) writes — HRV (SDNN) and resting
+// heart rate. No WRITE yet (read-first until verified on a real device). We
+// never read without an explicit opt-in (the Settings toggle), and Health data
+// never leaves the device.
 import { Platform } from 'react-native';
 
 let _mod = null;      // resolved native module (or null)
@@ -20,8 +19,7 @@ let _loaded = false;  // have we attempted the require yet
 
 // Lazy, guarded resolve. Uses a VARIABLE require (not a string literal) so Metro
 // does NOT try to resolve the package at bundle time — it stays a runtime call
-// that throws (and is caught) in any build where the native dep isn't present.
-// This is what keeps the current dev client bundling before the Health build.
+// that throws (and is caught) in any build where the native dep isn't linked.
 function mod() {
   if (_loaded) return _mod;
   _loaded = true;
@@ -35,13 +33,22 @@ function mod() {
   return _mod;
 }
 
-// Is HealthKit usable in THIS build on THIS device?
-export async function isHealthSupported() {
+// Resolve a named function off the module (v14 exposes both named exports and a
+// default HealthKit object).
+function fn(name) {
   const m = mod();
-  if (!m) return false;
+  if (!m) return null;
+  const f = m[name] ?? m.default?.[name];
+  return typeof f === 'function' ? f : null;
+}
+
+// Is HealthKit usable in THIS build on THIS device? (false in Simulator + any
+// build without the native module).
+export async function isHealthSupported() {
+  const avail = fn('isHealthDataAvailable') || fn('isHealthDataAvailableAsync');
+  if (!avail) return false;
   try {
-    const available = m.isHealthDataAvailable ?? m.default?.isHealthDataAvailable;
-    return typeof available === 'function' ? !!(await available()) : true;
+    return !!(await avail());
   } catch {
     return false;
   }
@@ -49,46 +56,45 @@ export async function isHealthSupported() {
 
 // The types we ask permission to READ. Kept minimal + relevant.
 const READ_TYPES = [
-  'HKQuantityTypeIdentifierStepCount',
-  'HKQuantityTypeIdentifierActiveEnergyBurned',
   'HKCategoryTypeIdentifierSleepAnalysis',
   'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
   'HKQuantityTypeIdentifierRestingHeartRate',
 ];
-const WRITE_TYPES = []; // none yet — read-first until verified on device
 
-// Request Health permissions. Returns true if the sheet was presented without
-// error. iOS never reveals whether the user granted read access (privacy), so a
-// true here means "asked", not "granted".
+// Request Health permissions (v14: a single { toShare, toRead } arg). iOS never
+// reveals whether the user granted READ access (privacy), so a true here means
+// "asked", not "granted".
 export async function requestHealthPermissions() {
-  const m = mod();
-  if (!m) return false;
+  const req = fn('requestAuthorization');
+  if (!req) return false;
   try {
-    const req = m.requestAuthorization ?? m.default?.requestAuthorization;
-    if (typeof req !== 'function') return false;
-    await req(WRITE_TYPES, READ_TYPES);
-    return true;
+    const res = await req({ toShare: [], toRead: READ_TYPES });
+    return res !== false; // v14 returns a boolean; undefined → treat as asked
   } catch {
     return false;
   }
 }
 
-// Read last night's sleep in hours (sum of asleep samples for the window).
-// Returns null if unavailable — callers must treat null as "no data".
+// v14 query filter: { filter: { date: { startDate, endDate } }, limit, ascending }.
+function windowFilter(hoursBack, extra = {}) {
+  const now = new Date();
+  const startDate = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+  return { filter: { date: { startDate, endDate: now } }, ...extra };
+}
+
+// Read last night's sleep in hours (sum of "asleep" segments over the last day).
+// Sleep-analysis values: 0 inBed · 1 asleepUnspecified · 2 awake · 3 core ·
+// 4 deep · 5 REM — count 1 and 3–5 as asleep. Returns null if unavailable.
 export async function readSleepHours() {
-  const m = mod();
-  if (!m) return null;
+  const query = fn('queryCategorySamples');
+  if (!query) return null;
   try {
-    const query = m.queryCategorySamples ?? m.default?.queryCategorySamples;
-    if (typeof query !== 'function') return null;
-    const now = Date.now();
-    const from = new Date(now - 24 * 60 * 60 * 1000);
-    const samples = await query('HKCategoryTypeIdentifierSleepAnalysis', { from, to: new Date(now) });
+    const samples = await query('HKCategoryTypeIdentifierSleepAnalysis', windowFilter(24, { limit: 1000, ascending: false }));
     if (!Array.isArray(samples) || !samples.length) return null;
-    // Sum "asleep" intervals (value/category ids vary by lib version — be lax).
     let ms = 0;
     for (const s of samples) {
-      const asleep = s.value == null ? true : Number(s.value) >= 1;
+      const v = s.value == null ? 1 : Number(s.value);
+      const asleep = v === 1 || v >= 3;
       if (asleep && s.startDate && s.endDate) ms += new Date(s.endDate) - new Date(s.startDate);
     }
     return ms > 0 ? Math.round((ms / 3_600_000) * 10) / 10 : null;
@@ -97,51 +103,33 @@ export async function readSleepHours() {
   }
 }
 
-// Read today's step count. Returns a number or null.
-export async function readStepsToday() {
-  const m = mod();
-  if (!m) return null;
-  try {
-    const sum = m.queryStatisticsForQuantity ?? m.default?.queryStatisticsForQuantity;
-    if (typeof sum !== 'function') return null;
-    const start = new Date(); start.setHours(0, 0, 0, 0);
-    const res = await sum('HKQuantityTypeIdentifierStepCount', ['cumulativeSum'], { from: start, to: new Date() });
-    const val = res?.sumQuantity?.quantity ?? res?.sumQuantity ?? res?.value;
-    return typeof val === 'number' ? Math.round(val) : null;
-  } catch {
-    return null;
-  }
-}
-
-// Most-recent value for a quantity type over the last ~2 days (recovery metrics
-// are written once/night). Lax across lib versions: prefer a dedicated
-// "most recent" call, else take the latest of a sample query.
+// Most-recent value for a quantity type (recovery metrics are written ~once/
+// night). v14: getMostRecentQuantitySample(identifier) → sample with .quantity.
 async function latestQuantity(typeId) {
-  const m = mod();
-  if (!m) return null;
-  try {
-    const recent = m.getMostRecentQuantitySample ?? m.default?.getMostRecentQuantitySample;
-    if (typeof recent === 'function') {
+  const recent = fn('getMostRecentQuantitySample');
+  if (recent) {
+    try {
       const s = await recent(typeId);
-      const v = s?.quantity ?? s?.value;
-      return typeof v === 'number' ? v : null;
+      const v = s?.quantity;
+      if (typeof v === 'number') return v;
+    } catch {
+      // fall through to a sample query
     }
-    const query = m.queryQuantitySamples ?? m.default?.queryQuantitySamples;
-    if (typeof query !== 'function') return null;
-    const now = Date.now();
-    const samples = await query(typeId, { from: new Date(now - 2 * 24 * 60 * 60 * 1000), to: new Date(now) });
+  }
+  const query = fn('queryQuantitySamples');
+  if (!query) return null;
+  try {
+    const samples = await query(typeId, windowFilter(48, { limit: 1, ascending: false }));
     if (!Array.isArray(samples) || !samples.length) return null;
-    const last = samples[samples.length - 1];
-    const v = last?.quantity ?? last?.value;
+    const v = samples[0]?.quantity;
     return typeof v === 'number' ? v : null;
   } catch {
     return null;
   }
 }
 
-// Resting heart rate (bpm) and HRV (SDNN, ms) — the recovery signals. These are
-// what Oura (as HRV/resting HR) and Whoop write into Health, so we get them
-// without a direct integration. Returns a number or null.
+// Resting heart rate (bpm) and HRV (SDNN, ms) — the recovery signals Oura/Whoop
+// write into Health, so we get them without a direct integration.
 export async function readRestingHeartRate() {
   const v = await latestQuantity('HKQuantityTypeIdentifierRestingHeartRate');
   return v == null ? null : Math.round(v);
@@ -163,27 +151,12 @@ export async function readHealthSnapshot() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ACTIVATION (rides a dedicated native build — cannot be verified in Simulator):
-//
-//   NOTE: this project has a COMMITTED, git-tracked ios/ directory (bare /
-//   prebuild workflow — EAS builds from the native project, not from app.json's
-//   managed config). So the Kingstinct CONFIG PLUGIN in app.json will NOT apply
-//   on its own. Configure the native project directly (or `expo prebuild --clean`,
-//   which regenerates ios/ and would drop any manual native customizations —
-//   diff carefully first).
-//
-//   1. npm i @kingstinct/react-native-healthkit react-native-nitro-modules
-//      then `npx pod-install` (or `cd ios && pod install`).
-//   2. In the native iOS project (Xcode / ios/):
-//        • Signing & Capabilities → add the HealthKit capability
-//          (adds com.apple.developer.healthkit to the .entitlements).
-//        • Info.plist → add:
-//            NSHealthShareUsageDescription  = "Origin reads sleep and activity
-//              to show how your protocol tracks against how you feel."
-//            NSHealthUpdateUsageDescription = "Origin can save your daily
-//              check-in to Health."
-//      (The privacy manifest already declares NSPrivacyCollectedDataTypeHealth.)
-//   3. eas build (a native rebuild) → verify read on a real device (HealthKit is
-//      unavailable on the iOS Simulator).
-//   4. Then wire readSleepHours() to prefill the check-in's sleep rating, etc.
+// ACTIVATION STATUS — native config is DONE (committed), only a build remains:
+//   ✓ deps: @kingstinct/react-native-healthkit + react-native-nitro-modules
+//   ✓ ios/Origin.entitlements: com.apple.developer.healthkit
+//   ✓ ios/Origin/Info.plist: NSHealth{Share,Update}UsageDescription
+//   ✓ App ID HealthKit capability enabled in the Apple Developer portal
+//   □ EAS build (autolinks the pod) → verify reads on a REAL device
+//     (HealthKit is unavailable in the iOS Simulator).
+//   □ then wire readHealthSnapshot() into the check-in / trends / report.
 // ─────────────────────────────────────────────────────────────────────────────
