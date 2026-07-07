@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, FileUp } from 'lucide-react-native';
+import { ArrowLeft, Share } from 'lucide-react-native';
 import { dateKey, startOfDay, isActiveSupp } from 'shared/lib/time';
 import { dbGetDailyLogsRange, dbGetCheckinsRange } from 'shared/lib/api';
 import { Heading } from '../components';
@@ -79,7 +79,7 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
         <IconButton accessibilityLabel="Back" onPress={onBack}><ArrowLeft size={icon.sm} color={theme.text.secondary} /></IconButton>
         <Heading level={1} visual="body" font="body">Insights</Heading>
         <IconButton accessibilityLabel="Export report for your doctor" onPress={exportReport} disabled={exporting}>
-          {exporting ? <InlineLoader /> : <FileUp size={icon.sm} color={theme.text.secondary} />}
+          {exporting ? <InlineLoader /> : <Share size={icon.sm} color={theme.text.secondary} strokeWidth={1.5} />}
         </IconButton>
       </View>
 
