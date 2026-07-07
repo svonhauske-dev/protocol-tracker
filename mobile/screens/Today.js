@@ -125,8 +125,8 @@ function Avatar({ initial, onPress }) {
 // cells, tap to set (tap current to clear), 44pt hit area via hitSlop.
 function FastRating({ label, value, onSet }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-      <Text style={{ width: 54, fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary }}>{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
+      <Text style={{ width: 52, fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary }}>{label}</Text>
       <View style={{ flexDirection: 'row', gap: spacing.xxs, flex: 1 }}>
         {[1, 2, 3, 4, 5].map((n) => {
           const filled = value != null && n <= value;
@@ -137,7 +137,7 @@ function FastRating({ label, value, onSet }) {
               accessibilityRole="button"
               accessibilityLabel={`${label} ${n} of 5`}
               hitSlop={{ top: 10, bottom: 10 }}
-              style={{ flex: 1, height: 24, borderWidth: theme.borderWidth.default, borderColor: filled ? theme.text.primary : theme.border.subtle, backgroundColor: filled ? theme.text.primary : 'transparent' }}
+              style={{ flex: 1, height: 14, borderWidth: theme.borderWidth.default, borderColor: filled ? theme.text.primary : theme.border.subtle, backgroundColor: filled ? theme.text.primary : 'transparent' }}
             />
           );
         })}
@@ -1272,17 +1272,17 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
           auto-saves, with the streak (progress = the #1 retention driver). Past
           days: a compact summary that opens the sheet. Hidden on future days. */}
       {isFuture ? null : isToday ? (
-        <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.md, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+        <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
             <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase' }}>// how you feel</Text>
-            {checkinStreak >= 2 ? <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary }}>{checkinStreak}-day streak</Text> : null}
+            <Pressable onPress={() => setCheckinOpen(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Check-in details and note" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              {checkinStreak >= 2 ? <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary }}>{checkinStreak}-day streak</Text> : null}
+              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note ›' : '+ note ›'}</Text>
+            </Pressable>
           </View>
           <FastRating label="energy" value={dayCheckin?.energy} onSet={(v) => quickSaveCheckin('energy', v)} />
           <FastRating label="mood" value={dayCheckin?.mood} onSet={(v) => quickSaveCheckin('mood', v)} />
           <FastRating label="sleep" value={dayCheckin?.sleep} onSet={(v) => quickSaveCheckin('sleep', v)} />
-          <Pressable onPress={() => setCheckinOpen(true)} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button" accessibilityLabel="Add a note" style={{ marginTop: spacing.xxs, alignSelf: 'flex-start' }}>
-            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note added · edit' : '+ add a note'} ›</Text>
-          </Pressable>
         </View>
       ) : (
         <Pressable

@@ -196,9 +196,12 @@ function buildHtml(protocol, supps, profile, scheduleMode, report = null) {
   return `<!doctype html><html><head><meta charset="utf-8"/>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    @page { margin: 56px 52px; }
+    @page { margin: 76px 64px; }
     * { box-sizing: border-box; }
     body { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; color: #0d0d0d; -webkit-font-smoothing: antialiased; font-size: 12px; line-height: 1.5; }
+    /* The WebView preview isn't paginated, so @page margins don't apply there —
+       mirror them as padding on screen so the preview matches the exported PDF. */
+    @media screen { body { padding: 76px 64px; } }
 
     /* ── Masthead — stacked, left-aligned (one clean edge for everything) ── */
     .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #0d0d0d; }
