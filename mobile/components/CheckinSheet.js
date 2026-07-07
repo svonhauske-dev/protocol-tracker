@@ -7,6 +7,7 @@ import Text from './Text';
 import SectionHeader from './SectionHeader';
 import HelperText from './HelperText';
 import FeelingScale from './FeelingScale';
+import { isHealthSupported, readSleepHours } from '../lib/health';
 import { theme, spacing } from '../theme';
 
 // A 1–5 rating as a row of sharp cells, filled up to the selected level (block
@@ -45,6 +46,7 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
   const [mood, setMood] = useState(null);
   const [sleep, setSleep] = useState(null);
   const [note, setNote] = useState('');
+  const [healthSleep, setHealthSleep] = useState(null); // last night's hours, from Apple Health
 
   // Re-seed from the day's existing check-in each time the sheet opens.
   useEffect(() => {
@@ -54,6 +56,18 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
       setSleep(initial?.sleep ?? null);
       setNote(initial?.note ?? '');
     }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-fill sleep from Apple Health (objective hours) when connected — so you
+  // don't hand-rate it. Guarded no-op off-device.
+  useEffect(() => {
+    let alive = true;
+    if (!open || global.localStorage.getItem('health_enabled') !== '1') { setHealthSleep(null); return; }
+    isHealthSupported().then((ok) => {
+      if (!ok || !alive) return;
+      readSleepHours().then((h) => { if (alive) setHealthSleep(h); }).catch(() => {});
+    }).catch(() => {});
+    return () => { alive = false; };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const empty = energy == null && mood == null && sleep == null && !note.trim();
@@ -79,7 +93,14 @@ export default function CheckinSheet({ open, onClose, initial, onSave, saving })
 
       {/* Optional depth. */}
       <RatingRow label="energy" value={energy} onChange={setEnergy} />
-      <RatingRow label="sleep" value={sleep} onChange={setSleep} />
+      {healthSleep != null ? (
+        <View style={{ marginBottom: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text>sleep</Text>
+          <Text size="label" tone="tertiary">{healthSleep}h · apple health</Text>
+        </View>
+      ) : (
+        <RatingRow label="sleep" value={sleep} onChange={setSleep} />
+      )}
 
       <View style={{ marginTop: spacing.xs }}>
         <SectionHeader>Notes</SectionHeader>

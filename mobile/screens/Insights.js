@@ -11,6 +11,7 @@ import InlineLoader from '../components/InlineLoader';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../components/Toast';
 import { computeReportData, healthReportHtml, sharePdfHtml } from '../lib/protocolPdf';
+import { isHealthSupported, readHealthSeries } from '../lib/health';
 import Trends from './Trends';
 import Interactions from './Interactions';
 import { theme, spacing, icon } from '../theme';
@@ -37,6 +38,24 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
 
   const reportName = `${(profile?.display_name || '').trim() || 'Origin'} — Origin report`;
 
+  // Objective Apple Health averages for the report — window-length means of
+  // sleep / HRV / resting HR. Guarded: null off-device or when not opted in.
+  const readReportHealth = async () => {
+    if (global.localStorage.getItem('health_enabled') !== '1') return null;
+    try {
+      if (!(await isHealthSupported())) return null;
+      const series = await readHealthSeries(REPORT_WINDOW);
+      const mean = (m) => { const v = Object.values(m || {}); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      const s = mean(series.sleep), hv = mean(series.hrv), hr = mean(series.restingHr);
+      if (s == null && hv == null && hr == null) return null;
+      return {
+        sleepAvg: s == null ? null : Math.round(s * 10) / 10,
+        hrvAvg: hv == null ? null : Math.round(hv),
+        hrAvg: hr == null ? null : Math.round(hr),
+      };
+    } catch { return null; }
+  };
+
   // Build the doctor report — the whole regimen + adherence + how-you-feel over
   // the window (same engine as the protocol PDF) — and open the preview. Fetches
   // the window's logs + check-ins and computes the summary once.
@@ -51,6 +70,7 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
         dbGetCheckinsRange(userId, dateKey(start), dateKey(today), token).catch(() => []),
       ]);
       const report = computeReportData({ supps, logs: logs || [], checkins: checkins || [], slotDefs, activeSlotIds, windowDays: REPORT_WINDOW });
+      report.health = await readReportHealth();
       setReportHtml(healthReportHtml(profile, supps.filter(isActiveSupp), scheduleMode, report));
     } catch (e) {
       showToast("couldn't build the report — try again", { tone: 'error' });

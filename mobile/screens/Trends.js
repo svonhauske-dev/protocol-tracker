@@ -13,7 +13,7 @@ import { Heading, SectionHeader, Text, Meter, InlineTip, EmptyState } from '../c
 import { FEELING_STATES } from '../components/FeelingScale';
 import CheckinSheet from '../components/CheckinSheet';
 import IconButton from '../components/IconButton';
-import { isHealthSupported, readHealthSnapshot } from '../lib/health';
+import { isHealthSupported, readHealthSeries } from '../lib/health';
 import { theme, spacing, typography, icon } from '../theme';
 
 const WINDOW = 30; // days
@@ -95,16 +95,16 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
   const [checkins, setCheckins] = useState([]);
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinSaving, setCheckinSaving] = useState(false);
-  const [health, setHealth] = useState(null); // { sleepHours, restingHr, hrv } — null off-device
+  const [health, setHealth] = useState(null); // { sleep, hrv, restingHr } day-maps — null off-device
 
-  // Objective layer — read last night's sleep + recovery from Apple Health, only
-  // if the user opted in. Guarded no-op everywhere but a Health build on device.
+  // Objective layer — 30-day sleep + recovery from Apple Health, only if the user
+  // opted in. Guarded no-op everywhere but a Health build on device.
   useEffect(() => {
     let alive = true;
     if (global.localStorage.getItem('health_enabled') !== '1') return;
     isHealthSupported().then((ok) => {
       if (!ok || !alive) return;
-      readHealthSnapshot().then((snap) => { if (alive) setHealth(snap); }).catch(() => {});
+      readHealthSeries(WINDOW).then((series) => { if (alive) setHealth(series); }).catch(() => {});
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -200,6 +200,25 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
     return { dailyPcts, overall, suppRows, slotRows, worstSlot, feeling, details, hasOutcomes };
   }, [logs, checkins, supps, slotDefs, activeSlotIds, dates]);
 
+  // Shape the Apple Health series for render: sleep as a 30-day track aligned to
+  // the date axis (normalized against ~12h), plus latest + average for each.
+  const healthView = useMemo(() => {
+    if (!health) return null;
+    const keys = dates.map((d) => dateKey(d));
+    const vals = (m) => Object.values(m);
+    const latest = (m) => { for (let i = keys.length - 1; i >= 0; i--) if (m[keys[i]] != null) return m[keys[i]]; return null; };
+    const avg = (m) => { const v = vals(m); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const sleepAvg = avg(health.sleep);
+    return {
+      hasAny: vals(health.sleep).length + vals(health.hrv).length + vals(health.restingHr).length > 0,
+      hasSleep: vals(health.sleep).length > 0,
+      sleepSeries: keys.map((k) => (health.sleep[k] != null ? Math.min(health.sleep[k] / 12, 1) : null)),
+      sleepAvg: sleepAvg == null ? null : Math.round(sleepAvg * 10) / 10,
+      hrvLatest: latest(health.hrv), hrvAvg: (a => a == null ? null : Math.round(a))(avg(health.hrv)),
+      hrLatest: latest(health.restingHr), hrAvg: (a => a == null ? null : Math.round(a))(avg(health.restingHr)),
+    };
+  }, [health, dates]);
+
   const startLabel = monthDay(dates[0]);
   const endLabel = 'today';
 
@@ -251,17 +270,27 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
           <View style={{ marginBottom: spacing.xl }}>
             <SectionHeader>how you feel · last {WINDOW} days</SectionHeader>
 
-            {/* Objective layer from Apple Health — the numbers your wearable
-                recorded last night, alongside how you rated the day. Only renders
-                when connected AND at least one value came back. */}
-            {health && (health.sleepHours != null || health.hrv != null || health.restingHr != null) ? (
+            {/* Objective layer from Apple Health — sleep charted over the window,
+                recovery as latest + average. The wearable numbers next to how you
+                rated the days. Renders only when connected AND data came back. */}
+            {healthView && healthView.hasAny ? (
               <View style={{ marginBottom: spacing.lg, borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md }}>
-                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>apple health · last night</Text>
-                <View style={{ flexDirection: 'row' }}>
-                  {health.sleepHours != null ? <HealthStat label="sleep" value={`${health.sleepHours}`} unit="h" /> : null}
-                  {health.hrv != null ? <HealthStat label="hrv" value={`${health.hrv}`} unit="ms" /> : null}
-                  {health.restingHr != null ? <HealthStat label="resting hr" value={`${health.restingHr}`} unit="bpm" /> : null}
-                </View>
+                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>from apple health</Text>
+                {healthView.hasSleep ? (
+                  <View style={{ marginBottom: (healthView.hrvLatest != null || healthView.hrLatest != null) ? spacing.md : 0 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                      <Text size="caption" tone="secondary">sleep</Text>
+                      <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{healthView.sleepAvg == null ? '—' : `${healthView.sleepAvg}h avg`}</Text>
+                    </View>
+                    <BarSeries values={healthView.sleepSeries} height={22} />
+                  </View>
+                ) : null}
+                {(healthView.hrvLatest != null || healthView.hrLatest != null) ? (
+                  <View style={{ flexDirection: 'row' }}>
+                    {healthView.hrvLatest != null ? <HealthStat label={healthView.hrvAvg != null ? `hrv · ${healthView.hrvAvg} avg` : 'hrv'} value={`${healthView.hrvLatest}`} unit="ms" /> : null}
+                    {healthView.hrLatest != null ? <HealthStat label={healthView.hrAvg != null ? `resting · ${healthView.hrAvg} avg` : 'resting hr'} value={`${healthView.hrLatest}`} unit="bpm" /> : null}
+                  </View>
+                ) : null}
               </View>
             ) : null}
 

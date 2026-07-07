@@ -137,13 +137,24 @@ function reportSectionsHtml(report) {
     <section class="rpt">
       <div class="rpt-label">How you feel · last ${windowDays} days</div>
       <div class="feel">
+        <div class="fcell"><div class="fv">${outcomes.mood != null ? outcomes.mood.toFixed(1) : '—'}</div><div class="fl">feeling</div></div>
         <div class="fcell"><div class="fv">${outcomes.energy != null ? outcomes.energy.toFixed(1) : '—'}</div><div class="fl">energy</div></div>
-        <div class="fcell"><div class="fv">${outcomes.mood != null ? outcomes.mood.toFixed(1) : '—'}</div><div class="fl">mood</div></div>
         <div class="fcell"><div class="fv">${outcomes.sleep != null ? outcomes.sleep.toFixed(1) : '—'}</div><div class="fl">sleep</div></div>
       </div>
       <div class="feel-sub">average of ${outcomes.count} daily check-in${outcomes.count === 1 ? '' : 's'}, on a 1–5 scale</div>
     </section>` : '';
-  return adherence + feel;
+  const h = report.health;
+  const health = h && (h.sleepAvg != null || h.hrvAvg != null || h.hrAvg != null) ? `
+    <section class="rpt">
+      <div class="rpt-label">Apple Health · last ${windowDays} days</div>
+      <div class="feel">
+        ${h.sleepAvg != null ? `<div class="fcell"><div class="fv">${h.sleepAvg}<span class="fu">h</span></div><div class="fl">sleep</div></div>` : ''}
+        ${h.hrvAvg != null ? `<div class="fcell"><div class="fv">${h.hrvAvg}<span class="fu">ms</span></div><div class="fl">HRV</div></div>` : ''}
+        ${h.hrAvg != null ? `<div class="fcell"><div class="fv">${h.hrAvg}<span class="fu">bpm</span></div><div class="fl">resting HR</div></div>` : ''}
+      </div>
+      <div class="feel-sub">daily averages from your wearable (sleep, heart-rate variability, resting heart rate)</div>
+    </section>` : '';
+  return adherence + feel + health;
 }
 
 // ── HTML ─────────────────────────────────────────────────────────────────────
@@ -239,6 +250,7 @@ function buildHtml(protocol, supps, profile, scheduleMode, report = null) {
     .bp { font-size: 11.5px; font-weight: 500; text-align: right; white-space: nowrap; }
     .feel { display: flex; gap: 44px; margin-top: 14px; }
     .fv { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 1; }
+    .fu { font-size: 13px; font-weight: 400; color: #888; margin-left: 2px; }
     .fl { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-top: 5px; }
     .feel-sub { font-size: 11px; color: #888; margin-top: 12px; }
 

@@ -13,6 +13,7 @@
 // never read without an explicit opt-in (the Settings toggle), and Health data
 // never leaves the device.
 import { Platform } from 'react-native';
+import { dateKey } from 'shared/lib/time';
 
 let _mod = null;      // resolved native module (or null)
 let _loaded = false;  // have we attempted the require yet
@@ -148,6 +149,62 @@ export async function readHealthSnapshot() {
     readHrv(),
   ]);
   return { sleepHours, restingHr, hrv };
+}
+
+// Per-day history over the last `days` for the objective layer, keyed by the
+// app's dateKey so it aligns 1:1 with the Trends date axis. Sleep is summed per
+// wake-day (the date a segment ENDS); HRV / resting HR are averaged per day.
+// Returns { sleep:{key:hours}, hrv:{key:ms}, restingHr:{key:bpm} } — empty maps
+// when unavailable. Uses only the verified sample queries (not the stats API).
+export async function readHealthSeries(days = 30) {
+  const out = { sleep: {}, hrv: {}, restingHr: {} };
+  const now = new Date();
+  const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const filter = { filter: { date: { startDate: start, endDate: now } }, limit: 5000, ascending: true };
+
+  // Sleep — sum asleep segments (values 1, 3–5) into the wake-day bucket.
+  const catQ = fn('queryCategorySamples');
+  if (catQ) {
+    try {
+      const s = await catQ('HKCategoryTypeIdentifierSleepAnalysis', filter);
+      if (Array.isArray(s)) {
+        for (const seg of s) {
+          const v = seg.value == null ? 1 : Number(seg.value);
+          if ((v === 1 || v >= 3) && seg.startDate && seg.endDate) {
+            const hrs = (new Date(seg.endDate) - new Date(seg.startDate)) / 3_600_000;
+            const k = dateKey(new Date(seg.endDate));
+            out.sleep[k] = (out.sleep[k] || 0) + hrs;
+          }
+        }
+        for (const k in out.sleep) out.sleep[k] = Math.round(out.sleep[k] * 10) / 10;
+      }
+    } catch { /* leave empty */ }
+  }
+
+  // HRV + resting HR — daily average of samples.
+  const quantQ = fn('queryQuantitySamples');
+  const avgByDay = async (typeId) => {
+    const acc = {}; // key -> [sum, count]
+    if (!quantQ) return {};
+    try {
+      const rows = await quantQ(typeId, filter);
+      if (Array.isArray(rows)) {
+        for (const r of rows) {
+          if (typeof r.quantity === 'number' && r.startDate) {
+            const k = dateKey(new Date(r.startDate));
+            (acc[k] ||= [0, 0]);
+            acc[k][0] += r.quantity; acc[k][1] += 1;
+          }
+        }
+      }
+    } catch { /* leave empty */ }
+    const m = {};
+    for (const k in acc) m[k] = Math.round(acc[k][0] / acc[k][1]);
+    return m;
+  };
+  out.hrv = await avgByDay('HKQuantityTypeIdentifierHeartRateVariabilitySDNN');
+  out.restingHr = await avgByDay('HKQuantityTypeIdentifierRestingHeartRate');
+  return out;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
