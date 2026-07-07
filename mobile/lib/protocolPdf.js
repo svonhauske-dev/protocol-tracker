@@ -328,3 +328,9 @@ export async function shareHealthReport({ profile, activeSupps, scheduleMode, re
     'Share your report',
   );
 }
+
+// Print + share an already-built HTML document — used by the preview modal's
+// share button, so we don't recompute the report just to send it.
+export function sharePdfHtml(html, fileBase, dialogTitle = 'Share') {
+  return renderAndShare(html, fileBase, dialogTitle);
+}

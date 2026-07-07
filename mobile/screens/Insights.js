@@ -8,8 +8,9 @@ import { Heading } from '../components';
 import IconButton from '../components/IconButton';
 import TabBar from '../components/TabBar';
 import InlineLoader from '../components/InlineLoader';
+import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../components/Toast';
-import { computeReportData, shareHealthReport } from '../lib/protocolPdf';
+import { computeReportData, healthReportHtml, sharePdfHtml } from '../lib/protocolPdf';
 import Trends from './Trends';
 import Interactions from './Interactions';
 import { theme, spacing, icon } from '../theme';
@@ -31,10 +32,14 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
   const { show: showToast } = useToast();
   const [tab, setTab] = useState(initialTab);
   const [exporting, setExporting] = useState(false);
+  const [reportHtml, setReportHtml] = useState(null); // non-null → preview open
+  const [sharing, setSharing] = useState(false);
 
-  // Export the doctor report — the whole regimen + adherence + how-you-feel over
-  // the window, as one PDF (same engine as the protocol share). Fetches the
-  // window's logs + check-ins, computes the summary, opens the share sheet.
+  const reportName = `${(profile?.display_name || '').trim() || 'Origin'} — Origin report`;
+
+  // Build the doctor report — the whole regimen + adherence + how-you-feel over
+  // the window (same engine as the protocol PDF) — and open the preview. Fetches
+  // the window's logs + check-ins and computes the summary once.
   const exportReport = async () => {
     if (exporting) return;
     setExporting(true);
@@ -46,11 +51,24 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
         dbGetCheckinsRange(userId, dateKey(start), dateKey(today), token).catch(() => []),
       ]);
       const report = computeReportData({ supps, logs: logs || [], checkins: checkins || [], slotDefs, activeSlotIds, windowDays: REPORT_WINDOW });
-      await shareHealthReport({ profile, activeSupps: supps.filter(isActiveSupp), scheduleMode, report });
+      setReportHtml(healthReportHtml(profile, supps.filter(isActiveSupp), scheduleMode, report));
     } catch (e) {
       showToast("couldn't build the report — try again", { tone: 'error' });
     } finally {
       setExporting(false);
+    }
+  };
+
+  // Share the already-built report from the preview (no recompute).
+  const handleShare = async () => {
+    if (sharing || !reportHtml) return;
+    setSharing(true);
+    try {
+      await sharePdfHtml(reportHtml, reportName, 'Share your report');
+    } catch (e) {
+      showToast("couldn't share — try again", { tone: 'error' });
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -75,6 +93,15 @@ export default function Insights({ supps = [], activeSlotIds, slotDefs = [], use
       ) : (
         <Interactions embedded supps={supps} />
       )}
+
+      {/* Report preview — see the doctor report before sending, share from here. */}
+      <PdfPreviewModal
+        open={!!reportHtml}
+        html={reportHtml || ''}
+        onShare={handleShare}
+        onClose={() => setReportHtml(null)}
+        sharing={sharing}
+      />
     </View>
   );
 }
