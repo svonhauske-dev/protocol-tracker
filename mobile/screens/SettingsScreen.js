@@ -74,7 +74,9 @@ export default function SettingsScreen({
   // this build AND the device has HealthKit (never on Simulator). Until the
   // dedicated Health build ships, isHealthSupported() resolves false → no row.
   const [healthSupported, setHealthSupported] = useState(false);
-  const [healthAsked, setHealthAsked] = useState(false);
+  // Persisted opt-in — iOS never reveals whether READ was granted, so we track
+  // that the user connected (used to gate reads/sync once the Health build ships).
+  const [healthAsked, setHealthAsked] = useState(() => global.localStorage.getItem('health_enabled') === '1');
   useEffect(() => { let a = true; isHealthSupported().then((ok) => { if (a) setHealthSupported(ok); }); return () => { a = false; }; }, []);
 
   const handleDeleteAccount = async () => {
@@ -208,8 +210,8 @@ export default function SettingsScreen({
             <ConfigRow
               ix="04"
               label="apple health"
-              value={healthAsked ? 'REQUESTED' : 'CONNECT'}
-              onPress={async () => { await requestHealthPermissions(); setHealthAsked(true); }}
+              value={healthAsked ? 'CONNECTED' : 'CONNECT'}
+              onPress={async () => { const ok = await requestHealthPermissions(); if (ok) { global.localStorage.setItem('health_enabled', '1'); setHealthAsked(true); } }}
             />
           ) : null}
           <ConfigRow ix={healthSupported ? '05' : '04'} label="privacy" onPress={() => Linking.openURL(PRIVACY_URL)} />

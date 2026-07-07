@@ -52,6 +52,8 @@ const READ_TYPES = [
   'HKQuantityTypeIdentifierStepCount',
   'HKQuantityTypeIdentifierActiveEnergyBurned',
   'HKCategoryTypeIdentifierSleepAnalysis',
+  'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
+  'HKQuantityTypeIdentifierRestingHeartRate',
 ];
 const WRITE_TYPES = []; // none yet — read-first until verified on device
 
@@ -109,6 +111,55 @@ export async function readStepsToday() {
   } catch {
     return null;
   }
+}
+
+// Most-recent value for a quantity type over the last ~2 days (recovery metrics
+// are written once/night). Lax across lib versions: prefer a dedicated
+// "most recent" call, else take the latest of a sample query.
+async function latestQuantity(typeId) {
+  const m = mod();
+  if (!m) return null;
+  try {
+    const recent = m.getMostRecentQuantitySample ?? m.default?.getMostRecentQuantitySample;
+    if (typeof recent === 'function') {
+      const s = await recent(typeId);
+      const v = s?.quantity ?? s?.value;
+      return typeof v === 'number' ? v : null;
+    }
+    const query = m.queryQuantitySamples ?? m.default?.queryQuantitySamples;
+    if (typeof query !== 'function') return null;
+    const now = Date.now();
+    const samples = await query(typeId, { from: new Date(now - 2 * 24 * 60 * 60 * 1000), to: new Date(now) });
+    if (!Array.isArray(samples) || !samples.length) return null;
+    const last = samples[samples.length - 1];
+    const v = last?.quantity ?? last?.value;
+    return typeof v === 'number' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+// Resting heart rate (bpm) and HRV (SDNN, ms) — the recovery signals. These are
+// what Oura (as HRV/resting HR) and Whoop write into Health, so we get them
+// without a direct integration. Returns a number or null.
+export async function readRestingHeartRate() {
+  const v = await latestQuantity('HKQuantityTypeIdentifierRestingHeartRate');
+  return v == null ? null : Math.round(v);
+}
+export async function readHrv() {
+  const v = await latestQuantity('HKQuantityTypeIdentifierHeartRateVariabilitySDNN');
+  return v == null ? null : Math.round(v);
+}
+
+// One call for the daily objective layer — sleep + recovery. All fields are
+// null-safe; callers render only what's present. Never leaves the device.
+export async function readHealthSnapshot() {
+  const [sleepHours, restingHr, hrv] = await Promise.all([
+    readSleepHours(),
+    readRestingHeartRate(),
+    readHrv(),
+  ]);
+  return { sleepHours, restingHr, hrv };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
