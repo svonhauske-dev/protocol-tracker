@@ -67,7 +67,6 @@ import Modal from '../components/Modal';
 import EditForm from '../components/EditForm';
 import BulkAddModal from '../components/BulkAddModal';
 import CheckinSheet from '../components/CheckinSheet';
-import FeelingScale, { FEELING_STATES } from '../components/FeelingScale';
 import MorningCheckin from '../components/MorningCheckin';
 import OriginGlyph from '../components/OriginGlyph';
 import InlineLoader from '../components/InlineLoader';
@@ -123,32 +122,6 @@ function Avatar({ initial, onPress }) {
   );
 }
 
-// Compact 1–5 rating for the home check-in card — the "5-second" input. Block
-// cells, tap to set (tap current to clear), 44pt hit area via hitSlop.
-// Compact 1–5 bar rating — the optional-detail metrics (energy, sleep).
-function FastRating({ label, value, onSet }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxs }}>
-      <Text style={{ width: 52, fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.secondary }}>{label}</Text>
-      <View style={{ flexDirection: 'row', gap: spacing.xxs, flex: 1 }}>
-        {[1, 2, 3, 4, 5].map((n) => {
-          const filled = value != null && n <= value;
-          return (
-            <Pressable
-              key={n}
-              onPress={() => onSet(value === n ? null : n)}
-              accessibilityRole="button"
-              accessibilityLabel={`${label} ${n} of 5`}
-              hitSlop={{ top: 10, bottom: 10 }}
-              style={{ flex: 1, height: 14, borderWidth: theme.borderWidth.default, borderColor: filled ? theme.text.primary : theme.border.subtle, backgroundColor: filled ? theme.text.primary : 'transparent' }}
-            />
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 export default function Today({ user, onSignOut, justOnboarded = false, onTrialShown }) {
   const [loading, setLoading] = useState(true);
   const [supps, setSupps] = useState([]);
@@ -188,7 +161,6 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   const [checkinByDate, setCheckinByDate] = useState({}); // dk → checkin row (or null once fetched)
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinSaving, setCheckinSaving] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false); // "+ details" reveals energy/sleep/note
   const [momentOpen, setMomentOpen] = useState(false); // once-a-day morning check-in ritual
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -1287,77 +1259,9 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
         onEditAnchor={onEditAnchor}
       />
 
-      {/* Daily check-in — the retention loop. Today: inline 5-second rating that
-          auto-saves, with the streak (progress = the #1 retention driver). Past
-          days: a compact summary that opens the sheet. Hidden on future days. */}
-      {isFuture ? null : isToday ? (
-        (() => {
-          // Show the optional metrics if the user opened them OR already has data.
-          const showDetails = detailsOpen || dayCheckin?.energy != null || dayCheckin?.sleep != null;
-          return (
-        <View style={{ borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginBottom: spacing.md }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-            <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase' }}>// how you feel</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              {checkinStreak >= 2 ? <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.primary }}>{checkinStreak}-day streak</Text> : null}
-              {!showDetails ? (
-                <Pressable onPress={() => setDetailsOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="Add details — energy, sleep, and a note">
-                  <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>+ details ›</Text>
-                </Pressable>
-              ) : (dayCheckin?.energy == null && dayCheckin?.sleep == null) ? (
-                <Pressable onPress={() => setDetailsOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="Hide details">
-                  <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>hide ›</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-
-          {/* The 5-second action — one tap on how you feel today. */}
-          <FeelingScale value={dayCheckin?.mood} onSet={(v) => quickSaveCheckin('mood', v)} />
-
-          {/* Optional depth — energy, sleep, and a note. Collapsed by default. */}
-          {showDetails ? (
-            <View style={{ marginTop: spacing.sm }}>
-              <FastRating label="energy" value={dayCheckin?.energy} onSet={(v) => quickSaveCheckin('energy', v)} />
-              <FastRating label="sleep" value={dayCheckin?.sleep} onSet={(v) => quickSaveCheckin('sleep', v)} />
-              <Pressable onPress={() => setCheckinOpen(true)} hitSlop={{ top: 8, bottom: 8 }} accessibilityRole="button" accessibilityLabel="Add a note" style={{ marginTop: spacing.xxs }}>
-                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>{dayCheckin?.note ? 'note ›' : '+ note ›'}</Text>
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-          );
-        })()
-      ) : (
-        <Pressable
-          onPress={() => setCheckinOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Daily check-in"
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: theme.borderWidth.default, borderColor: theme.border.subtle, paddingVertical: spacing.md, paddingHorizontal: spacing.md, marginBottom: spacing.md }}
-        >
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontFamily: fonts.mono.semibold, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.xxs }}>// how you feel</Text>
-            {dayCheckin ? (
-              <Text numberOfLines={1} style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>
-                {(() => {
-                  const parts = [];
-                  if (dayCheckin.mood != null) parts.push(FEELING_STATES[dayCheckin.mood - 1]);
-                  if (dayCheckin.energy != null) parts.push(`energy ${dayCheckin.energy}`);
-                  if (dayCheckin.sleep != null) parts.push(`sleep ${dayCheckin.sleep}`);
-                  if (dayCheckin.note) parts.push('note');
-                  return parts.join(' · ') || '—';
-                })()}
-              </Text>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>$ how did you feel?</Text>
-                <Cursor width={7} height={15} color={theme.text.secondary} style={{ marginLeft: 5 }} />
-              </View>
-            )}
-          </View>
-          <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginLeft: spacing.sm }}>{dayCheckin ? 'edit' : 'check in'} ›</Text>
-        </Pressable>
-      )}
+      {/* The feeling check-in does NOT live on the home surface — tracking is the
+          core action here. It's captured in the daily morning moment
+          (MorningCheckin) and reviewed under Insights › how you feel. */}
 
       {/* Floating slot cards — no outer wrapper; each card sits on the canvas. */}
       {homeSupps.length === 0 ? (

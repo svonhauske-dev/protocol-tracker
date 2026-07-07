@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Check } from 'lucide-react-native';
 import Text from './Text';
-import Cursor from './Cursor';
 import FeelingScale, { FEELING_STATES } from './FeelingScale';
 import { useReduceMotion } from '../lib/useReduceMotion';
-import { theme, spacing, typography, fonts } from '../theme';
+import { theme, spacing, typography, icon, fonts } from '../theme';
 
 function greetingFor(hour) {
   if (hour < 12) return 'good morning';
@@ -14,27 +14,29 @@ function greetingFor(hour) {
 }
 
 // The daily moment — a once-a-day, always-dismissible check-in ritual. Opens on
-// first launch of the day when today's feeling isn't logged yet; a time-aware
-// greeting at identity scale, the feeling instrument as the centerpiece, and a
-// one-tap save that lands on a short confirmation beat before it slips away.
-// Never blocks the app: tap the backdrop, "not now", or swipe intent all close.
+// first launch of the day when today's feeling isn't logged; a time-aware
+// greeting at identity scale, the feeling axis as the centrepiece, and a one-tap
+// save that lands on a held confirmation before it slips away. Never blocks the
+// app: tap the backdrop, "not now", or the confirmation all close it.
 export default function MorningCheckin({ open, name, dateLabel, hour = 8, streak = 0, onSelect, onNote, onClose }) {
   const reduceMotion = useReduceMotion();
   const slide = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const [rendered, setRendered] = useState(open);
   const [pickedN, setPickedN] = useState(null); // non-null → showing confirmation
+  const closeTimer = useRef(null);
 
   useEffect(() => {
     if (open) {
       setRendered(true);
       setPickedN(null);
       slide.setValue(0);
-      Animated.timing(slide, { toValue: 1, duration: 260, easing: Easing.out(Easing.ease), useNativeDriver: true }).start();
+      Animated.timing(slide, { toValue: 1, duration: 280, easing: Easing.out(Easing.ease), useNativeDriver: true }).start();
     } else if (rendered) {
-      Animated.timing(slide, { toValue: 0, duration: 200, easing: Easing.in(Easing.ease), useNativeDriver: true })
+      Animated.timing(slide, { toValue: 0, duration: 220, easing: Easing.in(Easing.ease), useNativeDriver: true })
         .start(({ finished }) => { if (finished) setRendered(false); });
     }
+    return () => clearTimeout(closeTimer.current);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!rendered) return null;
@@ -43,11 +45,11 @@ export default function MorningCheckin({ open, name, dateLabel, hour = 8, streak
     if (v == null || pickedN != null) return;
     setPickedN(v);
     onSelect(v);
-    // A held beat on the confirmation, then it slips away on its own.
-    setTimeout(onClose, 1150);
+    // A held, readable beat on the confirmation, then it eases away on its own.
+    closeTimer.current = setTimeout(onClose, 2600);
   };
 
-  const line = { fontFamily: fonts.grotesk.semibold, fontSize: typography.display, lineHeight: Math.round(typography.display * 1.08), color: theme.text.primary };
+  const hero = { fontFamily: fonts.grotesk.semibold, fontSize: typography.display, lineHeight: Math.round(typography.display * 1.08), color: theme.text.primary };
 
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1100, justifyContent: 'flex-end' }}>
@@ -64,7 +66,7 @@ export default function MorningCheckin({ open, name, dateLabel, hour = 8, streak
           paddingTop: spacing.md,
           paddingBottom: insets.bottom + spacing.xl,
           opacity: reduceMotion ? slide : 1,
-          transform: [{ translateY: reduceMotion ? 0 : slide.interpolate({ inputRange: [0, 1], outputRange: [600, 0] }) }],
+          transform: [{ translateY: reduceMotion ? 0 : slide.interpolate({ inputRange: [0, 1], outputRange: [640, 0] }) }],
         }}
       >
         {/* Drag handle */}
@@ -73,35 +75,44 @@ export default function MorningCheckin({ open, name, dateLabel, hour = 8, streak
         </View>
 
         {pickedN != null ? (
-          // Confirmation beat — echo the state, then a warm sign-off.
-          <View style={{ paddingBottom: spacing.xl }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-              <Text style={line}>{FEELING_STATES[pickedN - 1]}</Text>
-              <Cursor width={9} height={26} color={theme.text.primary} style={{ marginLeft: 6, marginBottom: 6 }} />
+          // Confirmation — tap anywhere to dismiss now, or it eases away on its own.
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
+            <View style={{ paddingBottom: spacing.xxl }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+                <View style={{ width: 34, height: 34, borderWidth: theme.borderWidth.default, borderColor: theme.text.primary, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md }}>
+                  <Check size={icon.sm} color={theme.text.primary} strokeWidth={2} />
+                </View>
+                <Text style={hero}>{FEELING_STATES[pickedN - 1]}</Text>
+              </View>
+              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary }}>
+                logged for today{streak >= 2 ? ` · ${streak + 1} days running` : ''}.
+              </Text>
+              <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginTop: spacing.sm }}>
+                see you tomorrow ›
+              </Text>
             </View>
-            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary, marginTop: spacing.md }}>
-              logged{streak >= 2 ? ` · ${streak + 1} days running` : ''} — see you tomorrow.
-            </Text>
-          </View>
+          </Pressable>
         ) : (
           <>
             <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: spacing.sm }}>// {dateLabel}</Text>
-            <Text style={line}>{greetingFor(hour)},</Text>
-            <Text style={line}>{name}</Text>
+            <Text style={hero}>{greetingFor(hour)},</Text>
+            <Text style={hero}>{name}</Text>
 
-            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary, marginTop: spacing.md, marginBottom: spacing.xl }}>
+            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.body, color: theme.text.secondary, marginTop: spacing.md, marginBottom: spacing.sm }}>
               how do you feel today?
             </Text>
+            <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary, marginBottom: spacing.xl }}>
+              one tap — the whole scale, rough to great.
+            </Text>
 
-            {/* The instrument — identical to the home card, given room to breathe.
-                The greeting already asks the question, so the scale stays quiet. */}
-            <FeelingScale value={null} onSet={pick} emptyLabel="" />
+            {/* The axis — the centrepiece, given room to breathe. */}
+            <FeelingScale value={null} onSet={pick} />
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xl }}>
-              <Pressable onPress={onNote} hitSlop={{ top: 10, bottom: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Add a note instead">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xxl }}>
+              <Pressable onPress={onNote} hitSlop={{ top: 12, bottom: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Add a note instead">
                 <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>+ add a note ›</Text>
               </Pressable>
-              <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10 }} accessibilityRole="button" accessibilityLabel="Not now">
+              <Pressable onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12 }} accessibilityRole="button" accessibilityLabel="Not now">
                 <Text style={{ fontFamily: fonts.mono.regular, fontSize: typography.label, color: theme.text.tertiary }}>not now</Text>
               </Pressable>
             </View>
