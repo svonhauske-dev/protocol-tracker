@@ -86,19 +86,43 @@ function windowFilter(hoursBack, extra = {}) {
 // Read last night's sleep in hours (sum of "asleep" segments over the last day).
 // Sleep-analysis values: 0 inBed · 1 asleepUnspecified · 2 awake · 3 core ·
 // 4 deep · 5 REM — count 1 and 3–5 as asleep. Returns null if unavailable.
+// Merge overlapping [startMs, endMs] intervals → total HOURS of their union.
+// Critical: a naive SUM double/triple-counts because several devices (Apple
+// Watch + Oura + Whoop) each write the same night, and "asleepUnspecified" often
+// overlaps the core/deep/REM stage samples — so a real ~7.6h night sums to ~23h.
+function unionHours(intervals) {
+  if (!intervals.length) return 0;
+  intervals.sort((a, b) => a[0] - b[0]);
+  let ms = 0, curS = intervals[0][0], curE = intervals[0][1];
+  for (let i = 1; i < intervals.length; i++) {
+    const [s, e] = intervals[i];
+    if (s <= curE) { if (e > curE) curE = e; }
+    else { ms += curE - curS; curS = s; curE = e; }
+  }
+  ms += curE - curS;
+  return ms / 3_600_000;
+}
+
+// [startMs, endMs] for each "asleep" segment (values 1, 3–5).
+function asleepIntervals(samples) {
+  const iv = [];
+  for (const s of samples || []) {
+    const v = s.value == null ? 1 : Number(s.value);
+    if ((v === 1 || v >= 3) && s.startDate && s.endDate) {
+      const st = +new Date(s.startDate), en = +new Date(s.endDate);
+      if (en > st) iv.push([st, en]);
+    }
+  }
+  return iv;
+}
+
 export async function readSleepHours() {
   const query = fn('queryCategorySamples');
   if (!query) return null;
   try {
-    const samples = await query('HKCategoryTypeIdentifierSleepAnalysis', windowFilter(24, { limit: 1000, ascending: false }));
-    if (!Array.isArray(samples) || !samples.length) return null;
-    let ms = 0;
-    for (const s of samples) {
-      const v = s.value == null ? 1 : Number(s.value);
-      const asleep = v === 1 || v >= 3;
-      if (asleep && s.startDate && s.endDate) ms += new Date(s.endDate) - new Date(s.startDate);
-    }
-    return ms > 0 ? Math.round((ms / 3_600_000) * 10) / 10 : null;
+    const samples = await query('HKCategoryTypeIdentifierSleepAnalysis', windowFilter(24, { limit: 2000, ascending: true }));
+    const h = unionHours(asleepIntervals(samples));
+    return h > 0 ? Math.round(h * 10) / 10 : null;
   } catch {
     return null;
   }
@@ -162,21 +186,22 @@ export async function readHealthSeries(days = 30) {
   const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const filter = { filter: { date: { startDate: start, endDate: now } }, limit: 5000, ascending: true };
 
-  // Sleep — sum asleep segments (values 1, 3–5) into the wake-day bucket.
+  // Sleep — group asleep segments by wake-day, then UNION per day (not sum) so
+  // multi-source / stage-overlap nights don't multiply (see unionHours).
   const catQ = fn('queryCategorySamples');
   if (catQ) {
     try {
       const s = await catQ('HKCategoryTypeIdentifierSleepAnalysis', filter);
       if (Array.isArray(s)) {
+        const byDay = {}; // wake-day key -> [[startMs,endMs], …]
         for (const seg of s) {
           const v = seg.value == null ? 1 : Number(seg.value);
           if ((v === 1 || v >= 3) && seg.startDate && seg.endDate) {
-            const hrs = (new Date(seg.endDate) - new Date(seg.startDate)) / 3_600_000;
-            const k = dateKey(new Date(seg.endDate));
-            out.sleep[k] = (out.sleep[k] || 0) + hrs;
+            const st = +new Date(seg.startDate), en = +new Date(seg.endDate);
+            if (en > st) (byDay[dateKey(new Date(seg.endDate))] ||= []).push([st, en]);
           }
         }
-        for (const k in out.sleep) out.sleep[k] = Math.round(out.sleep[k] * 10) / 10;
+        for (const k in byDay) out.sleep[k] = Math.round(unionHours(byDay[k]) * 10) / 10;
       }
     } catch { /* leave empty */ }
   }

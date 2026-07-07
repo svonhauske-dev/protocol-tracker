@@ -200,24 +200,19 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
     return { dailyPcts, overall, suppRows, slotRows, worstSlot, feeling, details, hasOutcomes };
   }, [logs, checkins, supps, slotDefs, activeSlotIds, dates]);
 
-  // Shape the Apple Health series for render: sleep as a 30-day track aligned to
-  // the date axis (normalized against ~12h), plus latest + average for each.
+  // Apple Health for render: just the window averages — clean numbers, not a
+  // cryptic 30-bar grid (which read as meaningless), and no noisy "latest".
   const healthView = useMemo(() => {
     if (!health) return null;
-    const keys = dates.map((d) => dateKey(d));
-    const vals = (m) => Object.values(m);
-    const latest = (m) => { for (let i = keys.length - 1; i >= 0; i--) if (m[keys[i]] != null) return m[keys[i]]; return null; };
-    const avg = (m) => { const v = vals(m); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-    const sleepAvg = avg(health.sleep);
+    const avg = (m) => { const v = Object.values(m || {}); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+    const s = avg(health.sleep), hv = avg(health.hrv), hr = avg(health.restingHr);
+    if (s == null && hv == null && hr == null) return null;
     return {
-      hasAny: vals(health.sleep).length + vals(health.hrv).length + vals(health.restingHr).length > 0,
-      hasSleep: vals(health.sleep).length > 0,
-      sleepSeries: keys.map((k) => (health.sleep[k] != null ? Math.min(health.sleep[k] / 12, 1) : null)),
-      sleepAvg: sleepAvg == null ? null : Math.round(sleepAvg * 10) / 10,
-      hrvLatest: latest(health.hrv), hrvAvg: (a => a == null ? null : Math.round(a))(avg(health.hrv)),
-      hrLatest: latest(health.restingHr), hrAvg: (a => a == null ? null : Math.round(a))(avg(health.restingHr)),
+      sleepAvg: s == null ? null : Math.round(s * 10) / 10,
+      hrvAvg: hv == null ? null : Math.round(hv),
+      hrAvg: hr == null ? null : Math.round(hr),
     };
-  }, [health, dates]);
+  }, [health]);
 
   const startLabel = monthDay(dates[0]);
   const endLabel = 'today';
@@ -298,27 +293,17 @@ export default function Trends({ supps = [], activeSlotIds, slotDefs = [], userI
               </View>
             ))}
 
-            {/* Objective layer from Apple Health — sleep charted, recovery as
-                latest·avg. Borderless like the rest of the section (no card);
-                renders only when connected AND data came back. */}
-            {healthView && healthView.hasAny ? (
+            {/* Objective layer from Apple Health — three clean window averages,
+                borderless like the rest of the section. Renders only when
+                connected AND data came back. */}
+            {healthView ? (
               <View style={{ marginTop: spacing.lg }}>
-                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>from apple health</Text>
-                {healthView.hasSleep ? (
-                  <View style={{ marginBottom: (healthView.hrvLatest != null || healthView.hrLatest != null) ? spacing.md : 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-                      <Text size="caption" tone="secondary">sleep</Text>
-                      <Text size="label" tone="tertiary" style={{ fontVariant: ['tabular-nums'] }}>{healthView.sleepAvg == null ? '—' : `${healthView.sleepAvg}h avg`}</Text>
-                    </View>
-                    <BarSeries values={healthView.sleepSeries} height={22} />
-                  </View>
-                ) : null}
-                {(healthView.hrvLatest != null || healthView.hrLatest != null) ? (
-                  <View style={{ flexDirection: 'row' }}>
-                    {healthView.hrvLatest != null ? <HealthStat label={healthView.hrvAvg != null ? `hrv · ${healthView.hrvAvg} avg` : 'hrv'} value={`${healthView.hrvLatest}`} unit="ms" /> : null}
-                    {healthView.hrLatest != null ? <HealthStat label={healthView.hrAvg != null ? `resting · ${healthView.hrAvg} avg` : 'resting hr'} value={`${healthView.hrLatest}`} unit="bpm" /> : null}
-                  </View>
-                ) : null}
+                <Text size="label" tone="tertiary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: spacing.sm }}>from apple health · {WINDOW}-day avg</Text>
+                <View style={{ flexDirection: 'row' }}>
+                  {healthView.sleepAvg != null ? <HealthStat label="sleep" value={`${healthView.sleepAvg}`} unit="h" /> : null}
+                  {healthView.hrvAvg != null ? <HealthStat label="hrv" value={`${healthView.hrvAvg}`} unit="ms" /> : null}
+                  {healthView.hrAvg != null ? <HealthStat label="resting hr" value={`${healthView.hrAvg}`} unit="bpm" /> : null}
+                </View>
               </View>
             ) : null}
 
