@@ -174,6 +174,7 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
   const loadedDays = useRef(new Set());
   const saveTimer = useRef(null);
   const pendingByDk = useRef({});
+  const lastRecomputedSched = useRef({}); // dk → last pill|ewo|ewc we recomputed for
   const didMount = useRef(false);
 
   const dk = dateKey(viewDate);
@@ -307,7 +308,20 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     const snapshot = JSON.stringify({ slice, pill, ewo, ewc });
     if (snapshot === savedDay.current[dk]) { delete pendingByDk.current[dk]; return; }
     const payload = { user_id: user.id, log_date: dk, pill_time: pill, eating_window_open: ewo, eating_window_close: ewc, checked: slice };
-    const doSave = () => dbUpsertLog(payload, token()).then(() => { savedDay.current[dk] = snapshot; delete pendingByDk.current[dk]; }).catch(() => {});
+    // Reminder TIMES are anchor/window-relative. When the anchor (pill_time) or
+    // eating window changes — NOT on check toggles — regenerate the server queue
+    // AFTER the save persists (else recompute reads the stale anchor). Without
+    // this, starting your day in flexible mode doesn't schedule that day's
+    // reminders until the 4h cron catches up.
+    const schedKey = `${pill}|${ewo}|${ewc}`;
+    const doSave = () => dbUpsertLog(payload, token()).then(() => {
+      savedDay.current[dk] = snapshot;
+      delete pendingByDk.current[dk];
+      if (dk === dateKey(TODAY) && global.localStorage.getItem('reminders_enabled') === '1' && lastRecomputedSched.current[dk] !== schedKey) {
+        lastRecomputedSched.current[dk] = schedKey;
+        recomputeNotifications().catch(() => {});
+      }
+    }).catch(() => {});
     pendingByDk.current[dk] = doSave;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(doSave, 400);
