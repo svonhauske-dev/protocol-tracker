@@ -62,7 +62,7 @@ export async function recomputeForUser(admin: any, userId: string, tz: string): 
     .not("ends_at", "is", null)
     .lt("ends_at", localToday);
 
-  const [schedResult, suppsResult, logResult, subResult] = await Promise.all([
+  const [schedResult, suppsResult, logResult, subResult, expoResult] = await Promise.all([
     admin.from("user_schedule").select("*").eq("user_id", userId).maybeSingle(),
     // Soft-deleted supps (deleted_at IS NOT NULL) are excluded — they were
     // removed from the cockpit so their notifications shouldn't fire either.
@@ -81,6 +81,15 @@ export async function recomputeForUser(admin: any, userId: string, tz: string): 
     admin.from("push_subscriptions")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
+    // Mobile's push channel is a SEPARATE table from web's push_subscriptions
+    // (see expo-push-tokens-migration.sql) — a mobile-only user has rows here
+    // and none in push_subscriptions. Missing this check was the root cause of
+    // "notifications not working" for mobile users: recompute bailed out via
+    // the hasSub gate below before ever queueing a row, even though
+    // process_notifications_queue already knew how to deliver to Expo tokens.
+    admin.from("expo_push_tokens")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
   ]);
 
   const sched    = schedResult.data;
@@ -91,7 +100,7 @@ export async function recomputeForUser(admin: any, userId: string, tz: string): 
   const checkedToday: Record<string, any> = logResult.data?.checked ?? {};
   const eatingWindowOpenToday:  string | null = logResult.data?.eating_window_open?.slice(0, 5)  ?? null;
   const eatingWindowCloseToday: string | null = logResult.data?.eating_window_close?.slice(0, 5) ?? null;
-  const hasSub   = (subResult.count ?? 0) > 0;
+  const hasSub   = (subResult.count ?? 0) > 0 || (expoResult.count ?? 0) > 0;
   const adaptive: boolean = sched?.adaptive_timing === true;
 
   // ── Early exits ───────────────────────────────────────────────────────────────

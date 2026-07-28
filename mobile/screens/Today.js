@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, RefreshControl, Pressable, Animated } from 'react-native';
+import { ScrollView, View, RefreshControl, Pressable, Animated, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Library, Plus, Pencil, TrendingUp } from 'lucide-react-native';
@@ -51,6 +51,7 @@ import { DEFAULT_CONFIG, deriveOffsets, getSlotLabelForMode, makeCheckKey, compu
 import { SLOTS, IF_SLOTS } from 'shared/lib/notifications';
 import { findInteractions } from 'shared/lib/interactions';
 import { getSlotTime, slotStatus } from '../lib/schedule';
+import { buildNextDose, writeNextDose, readPendingLogs, clearPendingLogs } from '../lib/widget';
 import { readCache, writeCache } from '../lib/cache';
 import { requestNotificationPermission, cancelAllReminders } from '../lib/notifications';
 import { registerPushToken, unregisterPushToken } from '../lib/push';
@@ -634,6 +635,76 @@ export default function Today({ user, onSignOut, justOnboarded = false, onTrialS
     }
     if (earliest) nextFixedSlot = { time: fmtTime(earliest.t), label: earliest.label };
   }
+
+  // Home-screen widget: mirror TODAY's next dose into the App Group whenever it
+  // changes. Gated on isToday because the viewed day may be a past/future day —
+  // the widget always represents today. The ref-diff means we only touch the
+  // native module (and reload WidgetKit) on an actual change, not every render.
+  const lastWidgetPayload = useRef(null);
+  useEffect(() => {
+    if (loading || !isToday) return;
+    const payload = buildNextDose({ slotDefs, ctx, getSuppsForSlot, isChecked, getSlotTime, todayKey });
+    const str = JSON.stringify(payload);
+    if (str === lastWidgetPayload.current) return;
+    lastWidgetPayload.current = str;
+    writeNextDose(payload);
+  }, [loading, isToday, dk, checked, scheduleMode, scheduleConfig, effectivePillTime, slotOffsets, supps, protocols, eatingWindowOpens, adaptiveEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Drain quick-log taps the widget queued while the app was closed. The widget
+  // can't reach Supabase (deferred reconcile), so it appends taps to the App
+  // Group; here we MERGE each tap into its day-row — preserving other slots'
+  // checks and the anchor/window — and upsert authoritatively (the viewed day
+  // may not be the tapped day, so we can't rely on the autosave effect). The
+  // widget-write effect above then rewrites the true next dose from fresh state.
+  const reconcilingRef = useRef(false);
+  const reconcileWidgetLogs = async () => {
+    if (loading || !user || reconcilingRef.current) return;
+    const pending = readPendingLogs();
+    if (!pending.length) return;
+    reconcilingRef.current = true;
+    try {
+      const byDate = {};
+      for (const e of pending) {
+        if (!e || !e.date || !e.slot || !Array.isArray(e.suppIds)) continue;
+        (byDate[e.date] ||= []).push(e);
+      }
+      for (const [date, entries] of Object.entries(byDate)) {
+        let row = weekLogs.find((l) => l.log_date === date) || null;
+        if (!row) {
+          const rows = await dbGetDailyLogsRange(user.id, date, date, token()).catch(() => []);
+          row = rows?.[0] || null;
+        }
+        // Union: server row + anything already in memory for that date + taps.
+        const merged = { ...(row?.checked || {}), ...sliceForDay(checked, date) };
+        for (const e of entries) {
+          for (const suppId of e.suppIds) {
+            const k = makeCheckKey(date, e.slot, suppId);
+            const on = merged[k] === true || (merged[k] && typeof merged[k] === 'object' && merged[k].checked);
+            if (!on) merged[k] = { checked: true, at: e.at };
+          }
+        }
+        const pill = pillTimes[date] || (row?.pill_time ? row.pill_time.slice(0, 5) : null);
+        const ewo = eatingWindowOpens[date] || (row?.eating_window_open ? row.eating_window_open.slice(0, 5) : null);
+        const ewc = eatingWindowCloses[date] || (row?.eating_window_close ? row.eating_window_close.slice(0, 5) : null);
+        const payload = { user_id: user.id, log_date: date, pill_time: pill, eating_window_open: ewo, eating_window_close: ewc, checked: merged };
+        await dbUpsertLog(payload, token());
+        setChecked((c) => ({ ...c, ...merged })); // reflect in UI + widget
+      }
+      clearPendingLogs();
+    } finally {
+      reconcilingRef.current = false;
+    }
+  };
+
+  // Run on first load and whenever the app returns to foreground. A ref keeps
+  // the AppState subscription pointed at the latest closure without resubscribing.
+  const reconcileRef = useRef(reconcileWidgetLogs);
+  reconcileRef.current = reconcileWidgetLogs;
+  useEffect(() => { if (!loading) reconcileRef.current(); }, [loading]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') reconcileRef.current(); });
+    return () => sub.remove();
+  }, []);
 
   const isAnchorMode = scheduleMode === 'medication' || scheduleMode === 'wakeup';
   function startDay() {

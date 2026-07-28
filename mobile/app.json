@@ -16,7 +16,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.origin-protocol",
-      "buildNumber": "23",
+      "buildNumber": "26",
+      "appleTeamId": "G8PH2D8N52",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.origin-protocol"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -91,7 +97,8 @@
       "expo-font",
       "expo-asset",
       "@react-native-community/datetimepicker",
-      "expo-sqlite"
+      "expo-sqlite",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
